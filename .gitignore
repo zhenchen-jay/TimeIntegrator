@@ -1,0 +1,5 @@
+build/*
+build_Xcode/*
+buildtest/*
+
+.DS_Store
