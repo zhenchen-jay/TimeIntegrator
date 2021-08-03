@@ -78,10 +78,8 @@ else (EIGEN3_INCLUDE_DIR)
         ENV EIGEN3_ROOT 
         ENV EIGEN3_ROOT_DIR
         PATHS
-        ${CMAKE_INSTALL_PREFIX}/include
-        ${KDE4_INCLUDE_DIR}
-        /Users/zhenc/Projects/Tools/libigl/external/eigen
-        PATH_SUFFIXES eigen3 eigen
+        third_parties/Eigen
+        PATH_SUFFIXES eigen3 eigen Eigen
       )
   endif(NOT EIGEN3_INCLUDE_DIR)
 
