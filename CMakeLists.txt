@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.15)
-project(ERE_exampe)
+project(Time_integrator_exampe)
 
 if(NOT CMAKE_BUILD_TYPE)
 	message(STATUS "No build type selected, default to release")
@@ -14,5 +14,5 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-file(GLOB SRCFILES src/*.cpp include/*.h)
+file(GLOB SRCFILES include/IntegrationScheme/*.h include/optimization/*.h)
 add_subdirectory(example)
