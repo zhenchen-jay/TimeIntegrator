@@ -12,17 +12,17 @@
 * E(x) = 1/2 x^T M x + potential_energy(x).
 * 
 * 
-Explicit (Forward) Euler:
+VelocityVerlet Euler:
 x_{n+1} = x_n + h * v_n
-v_{n+1} = v_n + h M^{-1} F(x_n)
+v_{n+1} = v_n + h M^{-1} F(x_{n+1})
 */
 
 template <typename Problem>
-void explicitEuler(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext)
+void velocityVerlet(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext)
 {
-    Eigen::VectorXd force; 
-    energyModel.computeGradient(xcur, force);
-    force *= -1;
     xnext = xcur + h * vcur;
+    Eigen::VectorXd force; 
+    energyModel.computeGradient(xnext, force);
+    force *= -1;
     vnext = vcur + h * force.cwiseQuotient(M);
 }
