@@ -22,7 +22,7 @@ v_{n+1} = v_n + h M^{-1} (F(x_{n+1}) + F(x_n)) / 2
 =>
 	x_{n+1} = x_n + h v_n + h^2 / 4 M^{-1} (F(x_{n+1}) + F(x_n))
 =>
-	x_{n+1} = min_y 1/2 (y - x_n - hv_n)^T M (y - x_n - hv_n) + h^2 / 4 E(y) - h^2 / 4 * M * y^T F(x_n)  (*)
+	x_{n+1} = min_y 1/2 (y - x_n - hv_n)^T M (y - x_n - hv_n) + h^2 / 4 E(y) - h^2 / 4 * y^T F(x_n)  (*)
 */
 
 template <typename Problem>
@@ -39,7 +39,7 @@ void trapezoid(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const d
     energyModel.computeGradient(xcur, fcur);
     fcur *= -1;
 
-	auto implicitEulerEnergy = [&](Eigen::VectorXd x, Eigen::VectorXd* grad, Eigen::SparseMatrix<double>* hess)
+	auto trapezoidEnergy = [&](Eigen::VectorXd x, Eigen::VectorXd* grad, Eigen::SparseMatrix<double>* hess)
 	{
 		double E = 0.5 * (x - xcur - h * vcur).transpose() * massMat * (x - xcur - h * vcur) + h * h / 4.0 * energyModel.computeEnergy(x) - h * h / 4.0 * x.dot(fcur);
 
@@ -58,14 +58,21 @@ void trapezoid(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const d
 		return E;
 	};
 
-	auto findMaxStep = [&](Eigen::VectorXd x)
+	auto findMaxStep = [&](Eigen::VectorXd x, Eigen::VectorXd dir)
 	{
-		return energyModel.getMaxStepSize(x);
+		return energyModel.getMaxStepSize(x, dir);
 	};
+
 	
+	auto postIteration = [&](Eigen::VectorXd x)
+	{
+		energyModel.postIteration(x);
+	};
+
 	// newton step to find the optimal
 	xnext = xcur;
-	newtonSolver(implicitEulerEnergy, findMaxStep, xnext);
+	energyModel.preTimeStep(xnext);
+	newtonSolver(trapezoidEnergy, findMaxStep, postIteration, xnext);
 
-	vnext = (xnext - xcur) / h;
+	vnext = 2 * (xnext - xcur) / h - vcur;
 }

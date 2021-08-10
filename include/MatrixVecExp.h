@@ -3,8 +3,10 @@
 #include <Eigen/Core>
 #include <unsupported/Eigen/MatrixFunctions>
 #include <cmath>
+#include <iostream>
 
-bool matrixVecExp(const Eigen::SparseMatrix<double>& A, const Eigen::VectorXd& v, const double t, const int m, const double tol, Eigen::VectorXd& w, double *err = NULL, double *hump = NULL)
+template <typename matrixType>
+bool matrixVecExp(const matrixType& A, const Eigen::VectorXd& v, const double t, const int m, const double tol, Eigen::VectorXd& w, double *err = NULL, double *hump = NULL)
 /*
  Implementation of the Krylove algorithm (see paper "Expokit: A Software Package for Computing Matrix Exponentials" for details) to compute the w = exp(t A) v. We adapted this script from the matlab source code "https://www.maths.uq.edu.au/expokit/matlab/"
  @paramIn
@@ -86,7 +88,7 @@ bool matrixVecExp(const Eigen::SparseMatrix<double>& A, const Eigen::VectorXd& v
         while (ireject <= mxrej)
         {
             mx = mb + k1;
-            Eigen::MatrixXd tmpH =sgn*t_step*H.block(0, 0, mx, mx);
+            Eigen::MatrixXd tmpH = sgn*t_step*H.block(0, 0, mx, mx);
             F = tmpH.exp(); // according to Eigen's documentation "https://eigen.tuxfamily.org/dox/unsupported/group__MatrixFunctions__Module.html", the computation is approximately 20 * mx^3
             if(k1 == 0)
             {

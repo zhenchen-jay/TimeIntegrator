@@ -54,14 +54,20 @@ void implicitEuler(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, con
 		return E;
 	};
 
-	auto findMaxStep = [&](Eigen::VectorXd x)
+	auto findMaxStep = [&](Eigen::VectorXd x, Eigen::VectorXd dir)
 	{
-		return energyModel.getMaxStepSize(x);
+		return energyModel.getMaxStepSize(x, dir);
+	};
+
+	auto postIteration = [&](Eigen::VectorXd x)
+	{
+		energyModel.postIteration(x);
 	};
 	
 	// newton step to find the optimal
 	xnext = xcur;
-	newtonSolver(implicitEulerEnergy, findMaxStep, xnext);
+	energyModel.preTimeStep(xnext);
+	newtonSolver(implicitEulerEnergy, findMaxStep, postIteration, xnext);
 
 	vnext = (xnext - xcur) / h;
 }

@@ -8,10 +8,13 @@
 #include "../include/IntegrationScheme/ExplicitEuler.h"
 #include "../include/IntegrationScheme/RoungeKutta4.h"
 #include "../include/IntegrationScheme/VelocityVerlet.h"
+#include "../include/IntegrationScheme/ExponentialRosenBrockEuler.h"
 
 #include "../include/IntegrationScheme/ImplicitEuler.h"
 #include "../include/IntegrationScheme/Trapezoid.h"
 #include "../include/IntegrationScheme/ImplicitMidPoint.h"
+#include "../include/IntegrationScheme/TrapezoidBDF2.h"
+#include "../include/IntegrationScheme/Newmark.h"
 
 #ifndef MASS_TOLERANCE
 #define MASS_TOLERANCE 100.0
@@ -40,44 +43,75 @@ void GooHook1dGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
 
 	if (ImGui::CollapsingHeader("UI Options", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		ImGui::Combo("Click Adds", (int *)&params_.clickMode, "Particles\0Saws\0\0");
+		if (ImGui::Combo("Click Adds", (int*)&params_.clickMode, "Particles\0Saws\0\0"))
+		{
+			updateParams();
+		}
 	}
 	if (ImGui::CollapsingHeader("Simulation Options", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		ImGui::InputDouble("Timestep",  &params_.timeStep);
-		ImGui::Combo("Integrator", (int *)&params_.integrator, "Explicit Euler\0Velocity Verlet\0Runge Kutta 4\0Exp Euler\0Implicit Euler\0Implicit Midpoint\0Trapzoid\0TRBDF2\0\0");
-		ImGui::InputDouble("Newton Tolerance", &params_.NewtonTolerance);
-		ImGui::InputInt("Newton Max Iters", &params_.NewtonMaxIters);
+		if (ImGui::InputDouble("Timestep", &params_.timeStep))
+			updateParams();
+		if(ImGui::Combo("Model Type", (int*)&params_.modelType, "Harmonic Ossocilation\0Mass Spring\0\0"))
+		{
+			initSimulation();
+		}
+		if (ImGui::Combo("Integrator", (int*)&params_.integrator, "Explicit Euler\0Velocity Verlet\0Runge Kutta 4\0Exp Euler\0Implicit Euler\0Implicit Midpoint\0Trapzoid\0TRBDF2\0Newmark\0\0"))
+			updateParams();
+		if (ImGui::InputDouble("Newmark Gamma", &params_.NM_gamma))
+			updateParams();
+		if (ImGui::InputDouble("Newmark Beta", &params_.NM_beta))
+			updateParams();
+		if (ImGui::InputDouble("TRBDF2 Gamma", &params_.TRBDF2_gamma))
+			updateParams();
+		if (ImGui::InputDouble("Newton Tolerance", &params_.NewtonTolerance))
+			updateParams();
+		if (ImGui::InputInt("Newton Max Iters", &params_.NewtonMaxIters))
+			updateParams();
+		if (ImGui::InputDouble("Spring Stiffness", &params_.springStiffness))
+			updateParams();
 	}
 	if (ImGui::CollapsingHeader("Forces", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		ImGui::Checkbox("Gravity Enabled", &params_.gravityEnabled);
-		ImGui::InputDouble("  Gravity g", &params_.gravityG);
-		ImGui::Checkbox("Springs Enabled", &params_.springsEnabled);
-		ImGui::InputDouble("  Max Strain", &params_.maxSpringStrain);
-		ImGui::Checkbox("Damping Enabled", &params_.dampingEnabled);
-		ImGui::InputDouble("  Viscosity", &params_.dampingStiffness);
-		ImGui::Checkbox("Floor Enabled", &params_.floorEnabled);
-		ImGui::Checkbox("Floor Friction Enabled", &params_.frictionEnabled);
-		//viewer.imgui->addWindow(Eigen::Vector2i(1000, 0), "New Objects");
+		if (ImGui::Checkbox("Gravity Enabled", &params_.gravityEnabled))
+			updateParams();
+		if (ImGui::InputDouble("  Gravity g", &params_.gravityG))
+			updateParams();
+		if (ImGui::Checkbox("Springs Enabled", &params_.springsEnabled))
+			updateParams();
+		if (ImGui::InputDouble("  Max Strain", &params_.maxSpringStrain))
+			updateParams();
+		if (ImGui::Checkbox("Damping Enabled", &params_.dampingEnabled))
+			updateParams();
+		if(ImGui::InputDouble("  Viscosity", &params_.dampingStiffness))
+			updateParams();
+		if(ImGui::Checkbox("Floor Enabled", &params_.floorEnabled))
+			updateParams();
+		if(ImGui::Checkbox("Floor Friction Enabled", &params_.frictionEnabled))
+			updateParams();
 	}
 
 
 	if (ImGui::CollapsingHeader("New Particles", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		ImGui::Checkbox("Is Fixed", &params_.particleFixed);
-		ImGui::InputDouble("Mass", &params_.particleMass);
+		if (ImGui::Checkbox("Is Fixed", &params_.particleFixed))
+			updateParams();
+		if (ImGui::InputDouble("Mass", &params_.particleMass))
+			updateParams();
 	}
 
 	if (ImGui::CollapsingHeader("New Springs", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		ImGui::InputDouble("Max Spring Dist", &params_.maxSpringDist);
-		ImGui::InputDouble("Base Stiffness", &params_.springStiffness);
+		if (ImGui::InputDouble("Max Spring Dist", &params_.maxSpringDist))
+			updateParams();
+		if (ImGui::InputDouble("Base Stiffness", &params_.springStiffness))
+			updateParams();
 	}
 
-	if (ImGui::Button("Test Force and Gradient", ImVec2(-1, 0)))
+	if (ImGui::Button("Test Gradient and Hessian", ImVec2(-1, 0)))
 	{
-		model_.testForceDifferential();
+		model_.testPotentialDifferential();
+		model_.testGradientDifferential();
 	}
 	
 }
@@ -127,38 +161,74 @@ void GooHook1dGui::updateRenderGeometry()
 		idx += 6;
 	}
 
-
-	for (std::vector<Connector1d *>::iterator it = model_.connectors_.begin(); it != model_.connectors_.end(); ++it)
+	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
 	{
-		Eigen::Vector3d color;
-		if ((*it)->associatedBendingStencils.empty())
-			color << 0.0, 0.0, 1.0;
-		else
-			color << 0.75, 0.5, 0.75;
-		Vector2d sourcepos = model_.particles_[(*it)->p].pos;
-		sourcepos(1) = 0;
-		Vector2d destpos = model_.particles_[(*it)->p].pos;
+		for (std::vector<Connector1d*>::iterator it = model_.connectors_.begin(); it != model_.connectors_.end(); ++it)
+		{
+			Eigen::Vector3d color;
+			if ((*it)->associatedBendingStencils.empty())
+				color << 0.0, 0.0, 1.0;
+			else
+				color << 0.75, 0.5, 0.75;
+			Vector2d sourcepos = model_.particles_[(*it)->p].pos;
+			sourcepos(1) = params_.ceil;
+			Vector2d destpos = model_.particles_[(*it)->p].pos;
 
-		Vector2d vec = destpos - sourcepos;
-		Vector2d perp(-vec[1], vec[0]);
-		perp /= perp.norm();
+			Vector2d vec = destpos - sourcepos;
+			Vector2d perp(-vec[1], vec[0]);
+			perp /= perp.norm();
 
-		double dist = (sourcepos - destpos).norm();
+			double dist = (sourcepos - destpos).norm();
 
-		double width = baselinewidth / (1.0 + 20.0 * dist * dist);
+			double width = baselinewidth / (1.0 + 20.0 * dist * dist);
 
-		for (int i = 0; i < 4; i++)
-			vertexColors.push_back(color);
+			for (int i = 0; i < 4; i++)
+				vertexColors.push_back(color);
 
-		verts.push_back(Eigen::Vector3d(sourcepos[0] + width * perp[0], sourcepos[1] + width * perp[1], -eps));
-		verts.push_back(Eigen::Vector3d(sourcepos[0] - width * perp[0], sourcepos[1] - width * perp[1], -eps));
-		verts.push_back(Eigen::Vector3d(destpos[0] + width * perp[0], destpos[1] + width * perp[1], -eps));
-		verts.push_back(Eigen::Vector3d(destpos[0] - width * perp[0], destpos[1] - width * perp[1], -eps));
+			verts.push_back(Eigen::Vector3d(sourcepos[0] + width * perp[0], sourcepos[1] + width * perp[1], -eps));
+			verts.push_back(Eigen::Vector3d(sourcepos[0] - width * perp[0], sourcepos[1] - width * perp[1], -eps));
+			verts.push_back(Eigen::Vector3d(destpos[0] + width * perp[0], destpos[1] + width * perp[1], -eps));
+			verts.push_back(Eigen::Vector3d(destpos[0] - width * perp[0], destpos[1] - width * perp[1], -eps));
 
-		faces.push_back(Eigen::Vector3i(idx, idx + 1, idx + 2));
-		faces.push_back(Eigen::Vector3i(idx + 2, idx + 1, idx + 3));
-		idx += 4;
+			faces.push_back(Eigen::Vector3i(idx, idx + 1, idx + 2));
+			faces.push_back(Eigen::Vector3i(idx + 2, idx + 1, idx + 3));
+			idx += 4;
+		}
 	}
+	else
+	{
+		for (std::vector<Connector*>::iterator it = model_.fullConnectors_.begin(); it != model_.fullConnectors_.end(); ++it)
+		{
+			Eigen::Vector3d color;
+			if ((*it)->associatedBendingStencils.empty())
+				color << 0.0, 0.0, 1.0;
+			else
+				color << 0.75, 0.5, 0.75;
+			Vector2d sourcepos = model_.particles_[(*it)->p1].pos;
+			Vector2d destpos = model_.particles_[(*it)->p2].pos;
+
+			Vector2d vec = destpos - sourcepos;
+			Vector2d perp(-vec[1], vec[0]);
+			perp /= perp.norm();
+
+			double dist = (sourcepos - destpos).norm();
+
+			double width = baselinewidth / (1.0 + 20.0 * dist * dist);
+
+			for (int i = 0; i < 4; i++)
+				vertexColors.push_back(color);
+
+			verts.push_back(Eigen::Vector3d(sourcepos[0] + width * perp[0], sourcepos[1] + width * perp[1], -eps));
+			verts.push_back(Eigen::Vector3d(sourcepos[0] - width * perp[0], sourcepos[1] - width * perp[1], -eps));
+			verts.push_back(Eigen::Vector3d(destpos[0] + width * perp[0], destpos[1] + width * perp[1], -eps));
+			verts.push_back(Eigen::Vector3d(destpos[0] - width * perp[0], destpos[1] - width * perp[1], -eps));
+
+			faces.push_back(Eigen::Vector3i(idx, idx + 1, idx + 2));
+			faces.push_back(Eigen::Vector3i(idx + 2, idx + 1, idx + 3));
+			idx += 4;
+		}
+	}
+	
 
 	int nParticles = model_.particles_.size();
 
@@ -215,11 +285,18 @@ void GooHook1dGui::initSimulation()
 {
 	time_ = 0;
 	model_ = GooHook1d(params_);
+	if(params_.modelType == SimParameters::MT_HARMONIC_1D)
+		model_.addParticle(0, -0.3);
+	else
+	{
+		model_.addParticle(0, 0.3);
+		model_.addParticle(0, 0);
+	}
 }
 
 void GooHook1dGui::tick()
 {
-	message_mutex.lock();
+	/*message_mutex.lock();
 	{
 		while (!mouseClicks_.empty())
 		{
@@ -235,7 +312,7 @@ void GooHook1dGui::tick()
 			}
 		}
 	}
-	message_mutex.unlock();
+	message_mutex.unlock();*/
 }
 
 bool GooHook1dGui::simulateOneStep()
@@ -258,6 +335,7 @@ bool GooHook1dGui::simulateOneStep()
 		velocityVerlet<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
 		break;
 	case SimParameters::TI_EXP_ROSENBROCK_EULER:
+		exponentialRosenBrockEuler<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
 		break;
 	case SimParameters::TI_IMPLICIT_EULER:
 		implicitEuler<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
@@ -269,12 +347,17 @@ bool GooHook1dGui::simulateOneStep()
 		trapezoid<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
 		break;
 	case SimParameters::TI_TR_BDF2:
+		trapezoidBDF2<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew, params_.TRBDF2_gamma);
+		break;
+	case SimParameters::TI_NEWMARK:
+		Newmark<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew, params_.NM_gamma, params_.NM_beta);
 		break;
 	}
 	//update configuration into particle data structure
 	prevPos = pos;
 	pos = posNew;
 	vel = velNew;
+	std::cout << "prePos: " << pos.norm() << ", current Pos: " << pos.norm() << ", vel: " << vel.norm() << std::endl;
 	model_.degenerateConfiguration(pos, vel, prevPos);
 	//std::cout<<"Degenerate Done"<<std::endl;
 

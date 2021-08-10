@@ -7,7 +7,7 @@
 #include "LineSearch.h"
 
 
-void newtonSolver(std::function<double (Eigen::VectorXd, Eigen::VectorXd*, Eigen::SparseMatrix<double>* )> objFunc, std::function<double (Eigen::VectorXd)> findMaxStep, Eigen::VectorXd& x0, int numIter = 1000, double gradTol = 1e-7, double xTol = 1e-10, double fTol = 1e-15)
+void newtonSolver(std::function<double (Eigen::VectorXd, Eigen::VectorXd*, Eigen::SparseMatrix<double>* )> objFunc, std::function<double (Eigen::VectorXd, Eigen::VectorXd)> findMaxStep, std::function<void (Eigen::VectorXd)> postIteration, Eigen::VectorXd& x0, int numIter = 1000, double gradTol = 1e-7, double xTol = 1e-10, double fTol = 1e-15)
 {
 	const int DIM = x0.rows();
 	Eigen::VectorXd grad = Eigen::VectorXd::Zero(DIM);
@@ -20,6 +20,7 @@ void newtonSolver(std::function<double (Eigen::VectorXd, Eigen::VectorXd*, Eigen
 
 	for (int i = 0; i < numIter; i++)
 	{
+		std::cout << "\niter: " << i << std::endl;
 		double f = objFunc(x0, &grad, &hessian);
 		
 		if (grad.norm() < gradTol)
@@ -43,7 +44,7 @@ void newtonSolver(std::function<double (Eigen::VectorXd, Eigen::VectorXd*, Eigen
 		neggrad = -grad;
 		delta_x = solver.solve(neggrad);
 
-		maxStepSize = findMaxStep(x0);
+		maxStepSize = findMaxStep(x0, delta_x);
 
 		double rate = backtrackingArmijo(x0, grad, delta_x, objFunc, maxStepSize);
 
@@ -54,7 +55,9 @@ void newtonSolver(std::function<double (Eigen::VectorXd, Eigen::VectorXd*, Eigen
 
 		double fnew = objFunc(x0, &grad, NULL);
 
-		std::cout << "iter: " << i << ", f_old: " << f << ", f_new: " << fnew << ", grad norm: " << grad.norm() << ", variable update: " << rate * delta_x.norm() << std::endl;
+		std::cout << "f_old: " << f << ", f_new: " << fnew << ", grad norm: " << grad.norm() << ", variable update: " << rate * delta_x.norm() << std::endl;
+
+		postIteration(x0);
 
 		if (grad.norm() < gradTol)
 			return;

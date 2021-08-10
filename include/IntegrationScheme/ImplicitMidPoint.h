@@ -39,7 +39,7 @@ void implicitMidPoint(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, 
     energyModel.computeGradient(xcur, fcur);
     fcur *= -1;
 
-	auto implicitEulerEnergy = [&](Eigen::VectorXd x, Eigen::VectorXd* grad, Eigen::SparseMatrix<double>* hess)
+	auto implicitMidPointEnergy = [&](Eigen::VectorXd x, Eigen::VectorXd* grad, Eigen::SparseMatrix<double>* hess)
 	{
         Eigen::VectorXd midPoint = (x + xcur) / 2.0;
 		double E = 0.5 * (x - xcur - h * vcur).transpose() * massMat * (x - xcur - h * vcur) + h * h * energyModel.computeEnergy(midPoint);
@@ -59,14 +59,20 @@ void implicitMidPoint(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, 
 		return E;
 	};
 
-	auto findMaxStep = [&](Eigen::VectorXd x)
+	auto findMaxStep = [&](Eigen::VectorXd x, Eigen::VectorXd dir)
 	{
-		return energyModel.getMaxStepSize(x);
+		return energyModel.getMaxStepSize(x, dir);
 	};
 	
+	auto postIteration = [&](Eigen::VectorXd x)
+	{
+		energyModel.postIteration(x);
+	};
+
 	// newton step to find the optimal
 	xnext = xcur;
-	newtonSolver(implicitEulerEnergy, findMaxStep, xnext);
+	energyModel.preTimeStep(xnext);
+	newtonSolver(implicitMidPointEnergy, findMaxStep, postIteration, xnext);
 
-	vnext = (xnext - xcur) / h;
+	vnext = 2 * (xnext - xcur) / h - vcur;
 }

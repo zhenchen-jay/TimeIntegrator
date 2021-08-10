@@ -54,6 +54,11 @@ public:
 		viewer.data().set_colors(renderC);
 	}
 
+	void updateParams()
+	{
+		model_.params_ = params_;
+	}
+
 private:
 	SimParameters params_;
 	double time_;

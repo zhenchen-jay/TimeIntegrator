@@ -20,9 +20,12 @@ v_{n+1} = v_n + h M^{-1} F(x_n)
 template <typename Problem>
 void explicitEuler(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext)
 {
-    Eigen::VectorXd force; 
-    energyModel.computeGradient(xcur, force);
-    force *= -1;
-    xnext = xcur + h * vcur;
-    vnext = vcur + h * force.cwiseQuotient(M);
+	Eigen::VectorXd force; 
+	energyModel.computeGradient(xcur, force);
+	std::cout << "force: " << std::endl;
+	force *= -1;
+	xnext = xcur + h * vcur;
+	vnext = vcur;
+	for (int i = 0; i < vnext.size(); i++)
+		vnext(i) += h / M(i) * force(i);
 }
