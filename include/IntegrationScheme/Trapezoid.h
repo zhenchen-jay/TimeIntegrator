@@ -22,18 +22,26 @@ v_{n+1} = v_n + h M^{-1} (F(x_{n+1}) + F(x_n)) / 2
 =>
 	x_{n+1} = x_n + h v_n + h^2 / 4 M^{-1} (F(x_{n+1}) + F(x_n))
 =>
-	x_{n+1} = min_y 1/2 (y - x_n - hv_n)^T M (y - x_n - hv_n) + h^2 / 4 E(y) - h^2 / 4 * y^T F(x_n)  (*)
+    xtilde = x_n + h v_n + h^2 / 4 M^{-1} F(x_n)
+	x_{n+1} = min_y 1/2 (y - xtilde)^T M (y - xtilde) + h^2 / 4 E(y)  (*)
 */
 
 template <typename Problem>
 void trapezoid(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext)
 {
 	std::vector<Eigen::Triplet<double>> massTrip;
-	SparseMatrix<double> massMat(M.size(), M.size());
+	Eigen::SparseMatrix<double> massMat(M.size(), M.size());
 
 	for (int i = 0; i < M.size(); i++)
 		massTrip.push_back({ i, i , M(i) });
 	massMat.setFromTriplets(massTrip.begin(), massTrip.end());
+    
+    massTrip.clear();
+    Eigen::SparseMatrix<double> massMatInv(M.size(), M.size());
+
+    for (int i = 0; i < M.size(); i++)
+        massTrip.push_back({ i, i , 1.0 / M(i) });
+    massMatInv.setFromTriplets(massTrip.begin(), massTrip.end());
 
     Eigen::VectorXd fcur;
     energyModel.computeGradient(xcur, fcur);
@@ -41,12 +49,13 @@ void trapezoid(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const d
 
 	auto trapezoidEnergy = [&](Eigen::VectorXd x, Eigen::VectorXd* grad, Eigen::SparseMatrix<double>* hess)
 	{
-		double E = 0.5 * (x - xcur - h * vcur).transpose() * massMat * (x - xcur - h * vcur) + h * h / 4.0 * energyModel.computeEnergy(x) - h * h / 4.0 * x.dot(fcur);
+        Eigen::VectorXd xtilde = xcur + h * vcur + h * h / 4.0 * massMatInv * fcur;
+		double E = 0.5 * (x - xtilde).transpose() * massMat * (x - xtilde) + h * h / 4.0 * energyModel.computeEnergy(x);
 
 		if (grad)
 		{
 			energyModel.computeGradient(x, (*grad));
-			(*grad) = massMat * (x - xcur - h * vcur) + h * h / 4.0 * (*grad) - h * h / 4.0 * fcur;
+			(*grad) = massMat * (x - xtilde) + h * h / 4.0 * (*grad);
 		}
 
 		if (hess)

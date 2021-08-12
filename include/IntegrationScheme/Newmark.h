@@ -17,18 +17,26 @@ x_{n+1} = x_n + h * v_n + (1/2 - \beta) h^2 M^{-1} F(x_n) + h^2 \beta M^{-1} F(x
 v_{n+1} = v_n + (1 - \gamma) h M^{-1} F(x_n) + \gamma h M^{-1} F(x_{n+1})
 
 =>
-x_{n+1} =  min_y 1/2 (y - x_n - hv_n)^T M (y - x_n - hv_n) + h^2 \beta E(y) - h^2 (1/2 - \beta) * y^T F(x_n)
+xtilde = x_n + h v_n + h^2 (1/2 - \beta) M^{-1} F(x_n)
+x_{n+1} =  min_y 1/2 (y - xtilde)^T M (y - xtilde) + h^2 \beta E(y)
 */
 
 template <typename Problem>
 void Newmark(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext, double gamma = 0.5, double beta = 0.25)
 {
 	std::vector<Eigen::Triplet<double>> massTrip;
-	SparseMatrix<double> massMat(M.size(), M.size());
+	Eigen::SparseMatrix<double> massMat(M.size(), M.size());
 
 	for (int i = 0; i < M.size(); i++)
 		massTrip.push_back({ i, i , M(i) });
 	massMat.setFromTriplets(massTrip.begin(), massTrip.end());
+    
+    massTrip.clear();
+    Eigen::SparseMatrix<double> massMatInv(M.size(), M.size());
+
+    for (int i = 0; i < M.size(); i++)
+        massTrip.push_back({ i, i , 1.0 / M(i) });
+    massMatInv.setFromTriplets(massTrip.begin(), massTrip.end());
 
 	Eigen::VectorXd fcur;
 	energyModel.computeGradient(xcur, fcur);
@@ -36,12 +44,13 @@ void Newmark(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const dou
 
 	auto newmarkEnergy = [&](Eigen::VectorXd x, Eigen::VectorXd* grad, Eigen::SparseMatrix<double>* hess)
 	{
-		double E = 0.5 * (x - xcur - h * vcur).transpose() * massMat * (x - xcur - h * vcur) + h * h * beta * energyModel.computeEnergy(x) - h * h * (0.5 - beta) * x.dot(fcur);
+        Eigen::VectorXd xtilde = xcur + h * vcur + h * h * (0.5 - beta) * massMatInv * fcur;
+		double E = 0.5 * (x - xtilde).transpose() * massMat * (x - xtilde) + h * h * beta * energyModel.computeEnergy(x);
 
 		if (grad)
 		{
 			energyModel.computeGradient(x, (*grad));
-			(*grad) = massMat * (x - xcur - h * vcur) + h * h * beta * (*grad) - h * h * (0.5 - beta) * fcur;
+			(*grad) = massMat * (x - xtilde) + h * h * beta * (*grad);
 		}
 
 		if (hess)
@@ -72,12 +81,7 @@ void Newmark(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const dou
 	energyModel.computeGradient(xnext, forceNext);
 	forceNext *= -1;
 
-	massTrip.clear();
-	Eigen::SparseMatrix<double> massMatInv(M.size(), M.size());
-
-	for (int i = 0; i < M.size(); i++)
-		massTrip.push_back({ i, i , 1.0 / M(i) });
-	massMatInv.setFromTriplets(massTrip.begin(), massTrip.end());
+	
 
 	vnext = vcur + h * massMatInv * ((1 - gamma) * fcur + gamma * forceNext);
 }

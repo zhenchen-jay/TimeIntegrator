@@ -29,7 +29,7 @@ template <typename Problem>
 void implicitEuler(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext)
 {
 	std::vector<Eigen::Triplet<double>> massTrip;
-	SparseMatrix<double> massMat(M.size(), M.size());
+	Eigen::SparseMatrix<double> massMat(M.size(), M.size());
 
 	for (int i = 0; i < M.size(); i++)
 		massTrip.push_back({ i, i , M(i) });

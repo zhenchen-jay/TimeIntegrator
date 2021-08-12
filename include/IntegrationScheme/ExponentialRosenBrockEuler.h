@@ -44,7 +44,7 @@ void exponentialRosenBrockEuler(const Eigen::VectorXd& xcur, const Eigen::Vector
 
     // mass inverse matrix
     std::vector<Eigen::Triplet<double>> massTrip;
-    SparseMatrix<double> massMatInv(M.size(), M.size());
+    Eigen::SparseMatrix<double> massMatInv(M.size(), M.size());
 
     for (int i = 0; i < M.size(); i++)
         massTrip.push_back(Eigen::Triplet<double>(i, i , M(i)));

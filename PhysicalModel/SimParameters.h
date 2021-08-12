@@ -33,7 +33,7 @@ struct SimParameters
         NM_beta = 0.25;
 
         modelType = MT_MASS_SPRING;
-        barrierStiffness = springStiffness;
+        barrierStiffness = 1e10;
         barrierEps = 1e-2;
 
     }

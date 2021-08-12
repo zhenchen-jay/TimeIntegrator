@@ -34,7 +34,7 @@ template <typename Problem>
 void RoungeKutta4(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext)
 {
 	std::vector<Eigen::Triplet<double>> massTrip;
-	SparseMatrix<double> massMatInv(M.size(), M.size());
+	Eigen::SparseMatrix<double> massMatInv(M.size(), M.size());
 
 	for (int i = 0; i < M.size(); i++)
 		massTrip.push_back({ i, i , 1.0 / M(i) });

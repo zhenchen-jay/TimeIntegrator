@@ -32,7 +32,8 @@ v_{n+1} - \gamma_2 h M^{-1} F(x_{n + 1}) = \gamma_3 v_{n + 2\gamma} + (1 - \gamm
 	x_{n + 2\gamma} = x_n +  \gamma h v_n + \gamma h (v_n + \gamma h M^{-1} F(x_n) + \gamma h M^{-1} F(x_{n + 2\gamma}))
 	x_{n + 2\gamma} = x_n +  2 * \gamma h v_n + (\gamma h)^2 M^{-1} (F(x_n) + F(x_{n + 2\gamma}))
 =>
-	x_{n + 2\gamma} = min_y 1/2 (y - x_n -  2 * \gamma h v_n)^T M (y - x_n -  2 * \gamma h v_n) + (\gamma h)^2 E(y) - (\gamma h)^2 * y^T F(x_n)
+    xtilde = x_n + 2 * \gamma h v_n + (\gamma h)^2 M^{-1} F(x_n)
+	x_{n + 2\gamma} = min_y 1/2 (y - xtilde)^T M (y - xtilde) + (\gamma h)^2 E(y)
 	v_{n + 2\gamma} = v_n + \gamma h M^{-1} (F(x_n) + F(x_{n + 2\gamma}))
 
 (for x_{n+1} and v_{n+1})
@@ -55,6 +56,13 @@ void trapezoidBDF2(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, con
 	Eigen::VectorXd fcur;
 	energyModel.computeGradient(xcur, fcur);
 	fcur *= -1;
+    
+    massTrip.clear();
+    Eigen::SparseMatrix<double> massMatInv(M.size(), M.size());
+
+    for (int i = 0; i < M.size(); i++)
+        massTrip.push_back({ i, i , 1.0 / M(i) });
+    massMatInv.setFromTriplets(massTrip.begin(), massTrip.end());
 
 	double gamma2 = (1 - 2 * gamma) / (2 * (1 - gamma));
 	double gamma3 = (1 - gamma2) / (2 * gamma);
@@ -62,14 +70,14 @@ void trapezoidBDF2(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, con
 	// step 1: compute x_gamma and v_gamma
 	auto trapezoidBDF2EnergyPart1 = [&](Eigen::VectorXd x, Eigen::VectorXd* grad, Eigen::SparseMatrix<double>* hess)
 	{
-		Eigen::VectorXd xpredict = xcur + 2 * gamma * h * vcur;
+		Eigen::VectorXd xtilde = xcur + 2 * gamma * h * vcur + std::pow(gamma * h, 2.0) * massMatInv * fcur;
 
-		double E = 0.5 * (x - xpredict).transpose() * massMat * (x - xpredict) + std::pow(gamma * h, 2.0) * energyModel.computeEnergy(x) - std::pow(gamma * h, 2.0) * x.dot(fcur);
+        double E = 0.5 * (x - xtilde).transpose() * massMat * (x - xtilde) + std::pow(gamma * h, 2.0) * energyModel.computeEnergy(x);
 
 		if (grad)
 		{
 			energyModel.computeGradient(x, (*grad));
-			(*grad) = massMat * (x - xpredict) + std::pow(gamma * h, 2.0) * (*grad) - std::pow(gamma * h, 2.0) * fcur;
+			(*grad) = massMat * (x - xtilde) + std::pow(gamma * h, 2.0) * (*grad);
 		}
 
 		if (hess)
@@ -132,13 +140,6 @@ void trapezoidBDF2(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, con
 		Eigen::VectorXd forceNext;
 		energyModel.computeGradient(xnext, forceNext);
 		forceNext *= -1;
-
-		massTrip.clear();
-		Eigen::SparseMatrix<double> massMatInv(M.size(), M.size());
-
-		for (int i = 0; i < M.size(); i++)
-			massTrip.push_back({ i, i , 1.0 / M(i) });
-		massMatInv.setFromTriplets(massTrip.begin(), massTrip.end());
 
 		vnext = gamma3 * vGamma - (1 - gamma3) * vcur + (gamma2 * h) * massMatInv * forceNext;
 	}

@@ -449,64 +449,64 @@ void GooHook1d::updateCloseParticles(Eigen::VectorXd q, double d_eps)
 
 void GooHook1d::preTimeStep(Eigen::VectorXd q)
 {
-	if (params_.floorEnabled)
-	{
-		Eigen::VectorXd floorGrad;
-		computeParticleFloorGradeint(q, floorGrad);
-
-		Eigen::VectorXd springGrad, gravityGrad, gradE;
-		computeSpringGradient(q, springGrad);
-		gradE = springGrad;
-		double l = 0.02 * std::sqrt(params_.particleMass);
-
-
-		double kappa_g = floorGrad.norm() > 0 ? -floorGrad.dot(gradE) / floorGrad.squaredNorm() : 0;
-
-		// suggested kappa by IPC paper:
-		double d = 1e-8 * l; // 0.02 is the radius of the point in gui
-		double Hb = -2 * std::log(d / params_.barrierEps) + (params_.barrierEps - d) * (params_.barrierEps + 3 * d) / (d * d);
-		double kappa_min = 1e11 * params_.particleMass / (4e-16 * l * Hb);
-		double kappa_max = 100 * kappa_min;
-
-		params_.barrierStiffness = std::min(kappa_max, std::max(kappa_min, kappa_g));
-
-		double d_eps = 1e-9 * l;
-		updateCloseParticles(q, d_eps);
-
-	}
+//	if (params_.floorEnabled)
+//	{
+//		Eigen::VectorXd floorGrad;
+//		computeParticleFloorGradeint(q, floorGrad);
+//
+//		Eigen::VectorXd springGrad, gravityGrad, gradE;
+//		computeSpringGradient(q, springGrad);
+//		gradE = springGrad;
+//		double l = 0.02 * std::sqrt(params_.particleMass);
+//
+//
+//		double kappa_g = floorGrad.norm() > 0 ? -floorGrad.dot(gradE) / floorGrad.squaredNorm() : 0;
+//
+//		// suggested kappa by IPC paper:
+//		double d = 1e-8 * l; // 0.02 is the radius of the point in gui
+//		double Hb = -2 * std::log(d / params_.barrierEps) + (params_.barrierEps - d) * (params_.barrierEps + 3 * d) / (d * d);
+//		double kappa_min = 1e11 * params_.particleMass / (4e-16 * l * Hb);
+//		double kappa_max = 100 * kappa_min;
+//
+//		params_.barrierStiffness = std::min(kappa_max, std::max(kappa_min, kappa_g));
+//
+//		double d_eps = 1e-9 * l;
+//		updateCloseParticles(q, d_eps);
+//
+//	}
 }
 
 void GooHook1d::postIteration(Eigen::VectorXd q)
 {
-	if (params_.floorEnabled)
-	{
-		double l = 0.02 * std::sqrt(params_.particleMass);
-		double d_eps = 1e-9 * l;
-
-		double d = 1e-8 * l; // 0.02 is the radius of the point in gui
-		double Hb = -2 * std::log(d / params_.barrierEps) + (params_.barrierEps - d) * (params_.barrierEps + 3 * d) / (d * d);
-		double kappa_min = 1e11 * params_.particleMass / (4e-16 * l * Hb);
-		double kappa_max = 100 * kappa_min;
-
-		for (int i = 0; i < closeParticles_.size(); i++)
-		{
-			int pid = closeParticles_[i].first;
-			if (q(i) <= -0.5 + l + d_eps || q(i) >= 0.5 - l - d_eps)
-			{
-				double pos = q(i);
-				double dist = d_eps;
-				if (q(i) <= -0.5 + l + d_eps)
-					dist = q(i) + 0.5 - l;
-				else
-					dist = 0.5 - l - q(i);
-				if (dist < closeParticles_[i].second)
-					params_.barrierStiffness = std::min(kappa_max, 2 * params_.barrierStiffness);
-			}
-		}
-
-		updateCloseParticles(q, d_eps);
-		std::cout << "After this iteration, barrier stiffness is: " << params_.barrierStiffness << std::endl;
-	}
+//	if (params_.floorEnabled)
+//	{
+//		double l = 0.02 * std::sqrt(params_.particleMass);
+//		double d_eps = 1e-9 * l;
+//
+//		double d = 1e-8 * l; // 0.02 is the radius of the point in gui
+//		double Hb = -2 * std::log(d / params_.barrierEps) + (params_.barrierEps - d) * (params_.barrierEps + 3 * d) / (d * d);
+//		double kappa_min = 1e11 * params_.particleMass / (4e-16 * l * Hb);
+//		double kappa_max = 100 * kappa_min;
+//
+//		for (int i = 0; i < closeParticles_.size(); i++)
+//		{
+//			int pid = closeParticles_[i].first;
+//			if (q(i) <= -0.5 + l + d_eps || q(i) >= 0.5 - l - d_eps)
+//			{
+//				double pos = q(i);
+//				double dist = d_eps;
+//				if (q(i) <= -0.5 + l + d_eps)
+//					dist = q(i) + 0.5 - l;
+//				else
+//					dist = 0.5 - l - q(i);
+//				if (dist < closeParticles_[i].second)
+//					params_.barrierStiffness = std::min(kappa_max, 2 * params_.barrierStiffness);
+//			}
+//		}
+//
+//		updateCloseParticles(q, d_eps);
+//		std::cout << "After this iteration, barrier stiffness is: " << params_.barrierStiffness << std::endl;
+//	}
 }
 
 
