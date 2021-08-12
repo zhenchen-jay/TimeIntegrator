@@ -25,8 +25,8 @@ public:
 	void addParticle(double x, double y);
 	void removeSnappedSprings();
 
-	void generateConfiguration(Eigen::VectorXd& pos, Eigen::VectorXd& vel, Eigen::VectorXd& prevPos);
-	void degenerateConfiguration(Eigen::VectorXd pos, Eigen::VectorXd vel, Eigen::VectorXd prevPos);
+	void generateConfiguration(Eigen::VectorXd& pos, Eigen::VectorXd& vel, Eigen::VectorXd& prevPos, Eigen::VectorXd& preVel);
+	void degenerateConfiguration(Eigen::VectorXd pos, Eigen::VectorXd vel, Eigen::VectorXd prevPos, Eigen::VectorXd preVel);
 
 
 	// Implement potential computation
@@ -56,12 +56,6 @@ public:
 	void assembleMassVec();
 	void preTimeStep(Eigen::VectorXd q);	// update the stiffness
 	void postIteration(Eigen::VectorXd q);	// update the stiffness
-
-	void updatebyExplicitEuler(Eigen::VectorXd& q, Eigen::VectorXd& qDot, Eigen::VectorXd& qPrev);
-	void updatebyVelocityVerlet(Eigen::VectorXd& q, Eigen::VectorXd& qDot, Eigen::VectorXd& qPrev);
-	void updatebyImplicitEuler(Eigen::VectorXd& q, Eigen::VectorXd& qDot, Eigen::VectorXd& qPrev);
-	void updatebyImplicitMidpoint(Eigen::VectorXd& q, Eigen::VectorXd& qDot, Eigen::VectorXd& qPrev);
-	void updatebyRK4(Eigen::VectorXd& q, Eigen::VectorXd& qDot, Eigen::VectorXd& qPrev);
 
 public:
 	std::vector<Particle, Eigen::aligned_allocator<Particle> > particles_;

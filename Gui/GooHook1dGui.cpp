@@ -4,7 +4,11 @@
 #include <iostream>
 #include <fstream>
 
+#include <igl/colormap.h>
+#include <igl/png/writePNG.h>
+
 #include "GooHook1dGui.h"
+
 #include "../include/IntegrationScheme/ExplicitEuler.h"
 #include "../include/IntegrationScheme/RoungeKutta4.h"
 #include "../include/IntegrationScheme/VelocityVerlet.h"
@@ -14,7 +18,10 @@
 #include "../include/IntegrationScheme/Trapezoid.h"
 #include "../include/IntegrationScheme/ImplicitMidPoint.h"
 #include "../include/IntegrationScheme/TrapezoidBDF2.h"
+#include "../include/IntegrationScheme/BDF2.h"
 #include "../include/IntegrationScheme/Newmark.h"
+
+
 
 #ifndef MASS_TOLERANCE
 #define MASS_TOLERANCE 100.0
@@ -56,7 +63,7 @@ void GooHook1dGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
 		{
 			initSimulation();
 		}
-		if (ImGui::Combo("Integrator", (int*)&params_.integrator, "Explicit Euler\0Velocity Verlet\0Runge Kutta 4\0Exp Euler\0Implicit Euler\0Implicit Midpoint\0Trapzoid\0TRBDF2\0Newmark\0\0"))
+		if (ImGui::Combo("Integrator", (int*)&params_.integrator, "Explicit Euler\0Velocity Verlet\0Runge Kutta 4\0Exp Euler\0Implicit Euler\0Implicit Midpoint\0Trapzoid\0TRBDF2\0BDF2\0Newmark\0\0"))
 			updateParams();
 		if (ImGui::InputDouble("Newmark Gamma", &params_.NM_gamma))
 			updateParams();
@@ -284,13 +291,58 @@ void GooHook1dGui::updateRenderGeometry()
 void GooHook1dGui::initSimulation()
 {
 	time_ = 0;
+	iterNum_ = 0;
+	GIFScale_ = 0.6;
 	model_ = GooHook1d(params_);
-	if(params_.modelType == SimParameters::MT_HARMONIC_1D)
+	outputFolderPath_ = "../output/";
+
+	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
+	{
 		model_.addParticle(0, -0.3);
+		outputFolderPath_ = outputFolderPath_ + "Harmonic1d/";
+	}
+		
 	else
 	{
 		model_.addParticle(0, 0.3);
 		model_.addParticle(0, 0);
+		outputFolderPath_ = outputFolderPath_ + "Pogo_Stick/";
+	}
+	double delay_10ms = std::min(10.0, params_.timeStep * 100.0);
+	GIFStep_ = static_cast<int>(std::ceil(3.0 / delay_10ms));
+	GIFDelay_ = static_cast<int>(delay_10ms * GIFStep_); // always about 3x10ms, around 33FPS
+
+	switch (params_.integrator)
+	{
+	case SimParameters::TI_EXPLICIT_EULER:
+		outputFolderPath_ = outputFolderPath_ + "Explicit_Euler/";
+		break;
+	case SimParameters::TI_RUNGE_KUTTA:
+		outputFolderPath_ = outputFolderPath_ + "RK4/";
+		break;
+	case SimParameters::TI_VELOCITY_VERLET:
+		outputFolderPath_ = outputFolderPath_ + "Velocity_Verlet/";
+		break;
+	case SimParameters::TI_EXP_ROSENBROCK_EULER:
+		outputFolderPath_ = outputFolderPath_ + "Exponential_Euler/";
+		break;
+	case SimParameters::TI_IMPLICIT_EULER:
+		outputFolderPath_ = outputFolderPath_ + "Implicit_Euler/";
+		break;
+	case SimParameters::TI_IMPLICIT_MIDPOINT:
+		outputFolderPath_ = outputFolderPath_ + "Implicit_midpoint/";
+		break;
+	case SimParameters::TI_TRAPEZOID:
+		outputFolderPath_ = outputFolderPath_ + "Trapezoid/";
+		break;
+	case SimParameters::TI_TR_BDF2:
+		outputFolderPath_ = outputFolderPath_ + "TR_BDF2/";
+		break;
+	case SimParameters::TI_BDF2:
+		outputFolderPath_ = outputFolderPath_ + "BDF2/";
+	case SimParameters::TI_NEWMARK:
+		outputFolderPath_ = outputFolderPath_ + "Newmark_" + std::to_string(params_.NM_beta) + "/";
+		break;
 	}
 }
 
@@ -317,8 +369,8 @@ void GooHook1dGui::tick()
 
 bool GooHook1dGui::simulateOneStep()
 {
-	VectorXd pos, vel, prevPos;
-	model_.generateConfiguration(pos, vel, prevPos);  
+	VectorXd pos, vel, prevPos, preVel;
+	model_.generateConfiguration(pos, vel, prevPos, preVel);  
 	model_.assembleMassVec();
 	//std::cout<<"Generate Done"<<std::endl;
 	Eigen::VectorXd posNew, velNew;
@@ -349,19 +401,79 @@ bool GooHook1dGui::simulateOneStep()
 	case SimParameters::TI_TR_BDF2:
 		trapezoidBDF2<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew, params_.TRBDF2_gamma);
 		break;
+	case SimParameters::TI_BDF2:
+		if(time_ == 0)
+			implicitEuler<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
+		else
+			BDF2<GooHook1d>(pos, vel, prevPos, preVel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
+		break;
 	case SimParameters::TI_NEWMARK:
 		Newmark<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew, params_.NM_gamma, params_.NM_beta);
 		break;
 	}
 	//update configuration into particle data structure
 	prevPos = pos;
+	preVel = vel;
 	pos = posNew;
 	vel = velNew;
-	std::cout << "prePos: " << pos.norm() << ", current Pos: " << pos.norm() << ", vel: " << vel.norm() << std::endl;
-	model_.degenerateConfiguration(pos, vel, prevPos);
+	//std::cout << "prePos: " << pos.norm() << ", current Pos: " << pos.norm() << ", vel: " << vel.norm() << std::endl;
+	model_.degenerateConfiguration(pos, vel, prevPos, preVel);
 	//std::cout<<"Degenerate Done"<<std::endl;
 
 	time_ += params_.timeStep;
+	iterNum_ += 1;
 
 	return false;
+}
+
+void GooHook1dGui::saveInfo(igl::opengl::glfw::Viewer& viewer, bool writePNG, bool writeGIF, int writeMesh, double save_dt)
+{
+
+}
+
+void GooHook1dGui::saveScreenshot(igl::opengl::glfw::Viewer& viewer, const std::string& filePath, double scale, bool writeGIF, bool writePNG)
+{
+	if (writeGIF) 
+	{
+		scale = GIFScale_;
+	}
+	viewer.data().point_size *= scale;
+
+	int width = static_cast<int>(scale * (viewer.core().viewport[2] - viewer.core().viewport[0]));
+	int height = static_cast<int>(scale * (viewer.core().viewport[3] - viewer.core().viewport[1]));
+
+	// Allocate temporary buffers for image
+	Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> R(width, height);
+	Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> G(width, height);
+	Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> B(width, height);
+	Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> A(width, height);
+
+	// Draw the scene in the buffers
+	viewer.core().draw_buffer(viewer.data(), false, R, G, B, A);
+
+	if (writePNG) {
+		// Save it to a PNG
+		igl::png::writePNG(R, G, B, A, filePath);
+	}
+
+	if (writeGIF && (iterNum_ % GIFStep_ == 0)) {
+		std::vector<uint8_t> img(width * height * 4);
+		for (int rowI = 0; rowI < width; rowI++) {
+			for (int colI = 0; colI < height; colI++) {
+				int indStart = (rowI + (height - 1 - colI) * width) * 4;
+				img[indStart] = R(rowI, colI);
+				img[indStart + 1] = G(rowI, colI);
+				img[indStart + 2] = B(rowI, colI);
+				img[indStart + 3] = A(rowI, colI);
+			}
+		}
+		GifWriteFrame(&GIFWriter_, img.data(), width, height, GIFDelay_);
+	}
+
+	viewer.data().point_size /= scale;
+}
+
+void GooHook1dGui::saveInfoForPresent(igl::opengl::glfw::Viewer& viewer, const std::string fileName, double save_dt)
+{
+
 }

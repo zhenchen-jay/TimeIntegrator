@@ -2,4 +2,6 @@ build/*
 build_Xcode/*
 buildtest/*
 
+output/*
+
 .DS_Store

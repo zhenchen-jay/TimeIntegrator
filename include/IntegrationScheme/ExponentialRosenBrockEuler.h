@@ -3,7 +3,7 @@
 #include <Eigen/Core>
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
-#include "../MatrixVecExp.h"
+#include "../Utils/MatrixVecExp.h"
 
 /*
 * For the system we aimed to solve:

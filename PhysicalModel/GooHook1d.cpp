@@ -49,22 +49,25 @@ void GooHook1d::addParticle(double x, double y)
 ///             Generate/Degenerate Configuration
 //////////////////////////////////////////////////////////////////////////////////////
 
-void GooHook1d::generateConfiguration(Eigen::VectorXd &pos, Eigen::VectorXd &vel, Eigen::VectorXd &prevPos)
+void GooHook1d::generateConfiguration(Eigen::VectorXd &pos, Eigen::VectorXd &vel, Eigen::VectorXd &prevPos, Eigen::VectorXd& preVel)
 {
 	int nParticles =  particles_.size();
 	pos.resize(nParticles);
 	vel.resize(nParticles);
 	prevPos.resize(nParticles);
+	preVel.resize(nParticles);
 	
 	for(int i = 0; i < nParticles; i++)
 	{
 		prevPos(i) = particles_[i].prevpos(1);
+		preVel(i) = particles_[i].preVel(1);
+
 		pos(i) = particles_[i].pos(1);
 		vel(i) = particles_[i].vel(1);
 	}
 }
 
-void GooHook1d::degenerateConfiguration(Eigen::VectorXd pos, Eigen::VectorXd vel, Eigen::VectorXd prevPos)
+void GooHook1d::degenerateConfiguration(Eigen::VectorXd pos, Eigen::VectorXd vel, Eigen::VectorXd prevPos, Eigen::VectorXd preVel)
 {
 	assert(pos.size() == particles_.size());
 	int nParticles = particles_.size();
@@ -76,6 +79,8 @@ void GooHook1d::degenerateConfiguration(Eigen::VectorXd pos, Eigen::VectorXd vel
 
 		// TODO: check if we need to update previous position based on value of the configuration
 		particles_[i].prevpos = particles_[i].pos;
+		particles_[i].preVel = particles_[i].vel;
+
 		particles_[i].pos(1) = pos(i);
 		particles_[i].vel(1) = vel(i);
 	}
@@ -515,8 +520,8 @@ void GooHook1d::postIteration(Eigen::VectorXd q)
 //////////////////////////////////////////////////////////////////////////////////////
 void GooHook1d::testPotentialDifferential()
 {
-	Eigen::VectorXd q, qPrev, vel;
-	generateConfiguration(q, vel, qPrev);
+	Eigen::VectorXd q, qPrev, vel, preVel;
+	generateConfiguration(q, vel, qPrev, preVel);
 	
 	Eigen::VectorXd direction = Eigen::VectorXd::Random(q.size());
 	direction.normalize();
@@ -538,8 +543,8 @@ void GooHook1d::testPotentialDifferential()
 
 void GooHook1d::testGradientDifferential()
 {
-	Eigen::VectorXd q, qPrev, vel;
-	generateConfiguration(q, vel, qPrev);
+	Eigen::VectorXd q, qPrev, vel, preVel;
+	generateConfiguration(q, vel, qPrev, preVel);
 	
 	
 	Eigen::VectorXd direction = Eigen::VectorXd::Random(q.size());

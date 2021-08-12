@@ -19,6 +19,7 @@ public:
     Eigen::Vector2d pos;
     Eigen::Vector2d prevpos;
     Eigen::Vector2d vel;
+    Eigen::Vector2d preVel;
     double mass;
     bool fixed;
     bool inert;

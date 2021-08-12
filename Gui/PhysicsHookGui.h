@@ -5,6 +5,9 @@
 #include <thread>
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
+
+#include "../include/Utils/GIF.hpp"
+
 class PhysicsHookGui
 {
 public:

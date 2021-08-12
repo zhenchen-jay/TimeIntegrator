@@ -32,15 +32,15 @@ struct SimParameters
         NM_gamma = 0.5;
         NM_beta = 0.25;
 
-        modelType = MT_MASS_SPRING;
+        modelType = MT_POGO_STICK;
         barrierStiffness = 1e10;
         barrierEps = 1e-2;
 
     }
 
     enum ClickMode {CM_ADDPARTICLE, CM_ADDSAW};
-    enum TimeIntegrator {TI_EXPLICIT_EULER, TI_VELOCITY_VERLET, TI_RUNGE_KUTTA, TI_EXP_ROSENBROCK_EULER, TI_IMPLICIT_EULER, TI_IMPLICIT_MIDPOINT, TI_TRAPEZOID, TI_TR_BDF2, TI_NEWMARK};
-    enum ModelType {MT_HARMONIC_1D, MT_MASS_SPRING};
+    enum TimeIntegrator {TI_EXPLICIT_EULER, TI_VELOCITY_VERLET, TI_RUNGE_KUTTA, TI_EXP_ROSENBROCK_EULER, TI_IMPLICIT_EULER, TI_IMPLICIT_MIDPOINT, TI_TRAPEZOID, TI_TR_BDF2, TI_BDF2, TI_NEWMARK};
+    enum ModelType {MT_HARMONIC_1D, MT_POGO_STICK};
 
     double timeStep;
     TimeIntegrator integrator;
