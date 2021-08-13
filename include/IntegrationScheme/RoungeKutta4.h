@@ -45,19 +45,19 @@ void RoungeKutta4(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, cons
 	Eigen::VectorXd a1, a2, b1, b2, c1, c2, d1, d2;
 	a1 = vcur;
 	energyModel.computeGradient(xcur, a2);
-	a2 *= -massMatInv;
+	a2 = -massMatInv * a2;
 	
 	b1 = vcur + h / 2 * a2;
 	energyModel.computeGradient(xcur + h / 2 * a1, b2);
-	b2 *= -massMatInv;
+	b2 = -massMatInv * b2;
 
 	c1 = vcur + h / 2 * b2;
 	energyModel.computeGradient(xcur + h / 2 * b1, c2);
-	c2 *= -massMatInv;
+	c2 = -massMatInv * c2;
 
 	d1 = vcur + h * c2;
 	energyModel.computeGradient(xcur + h / 2 * c1, d2);
-	d2 *= -massMatInv;
+	d2 = -massMatInv * d2;
 
 	xnext = xcur + h / 6 * (a1 + 2 * b1 + 2 * c1 + d1);
 	vnext = vcur + h / 6 * (a2 + 2 * b2 + 2 * c2 + d2);

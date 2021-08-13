@@ -3,7 +3,10 @@
 #include <iomanip>
 #include <iostream>
 #include <fstream>
+#include <filesystem>
 
+#include <igl/opengl/glfw/Viewer.h>
+#include <igl/opengl/glfw/imgui/ImGuiMenu.h>
 #include <igl/colormap.h>
 #include <igl/png/writePNG.h>
 
@@ -45,14 +48,6 @@ void GooHook1dGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
 		{
 			std::string filePath = igl::file_dialog_save();
 			model_.saveConfiguration(filePath);
-		}
-	}
-
-	if (ImGui::CollapsingHeader("UI Options", ImGuiTreeNodeFlags_DefaultOpen))
-	{
-		if (ImGui::Combo("Click Adds", (int*)&params_.clickMode, "Particles\0Saws\0\0"))
-		{
-			updateParams();
 		}
 	}
 	if (ImGui::CollapsingHeader("Simulation Options", ImGuiTreeNodeFlags_DefaultOpen))
@@ -123,6 +118,15 @@ void GooHook1dGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
 	
 }
 
+
+void GooHook1dGui::reset()
+{
+	initSimulation();
+	updateRenderGeometry();
+}
+
+
+
 void GooHook1dGui::updateRenderGeometry()
 {
 	double baseradius = 0.02;
@@ -157,13 +161,30 @@ void GooHook1dGui::updateRenderGeometry()
 
 		verts.push_back(Eigen::Vector3d(-1, -0.5, eps));
 		verts.push_back(Eigen::Vector3d(1, -0.5, eps));
-		verts.push_back(Eigen::Vector3d(-1, -1, eps));
+		verts.push_back(Eigen::Vector3d(-1, -0.5 - 0.01, eps));
 
 		faces.push_back(Eigen::Vector3i(idx, idx + 1, idx + 2));
 
-		verts.push_back(Eigen::Vector3d(-1, -1, eps));
+		verts.push_back(Eigen::Vector3d(-1, -0.5 - 0.01, eps));
 		verts.push_back(Eigen::Vector3d(1, -0.5, eps));
-		verts.push_back(Eigen::Vector3d(1, -1, eps));
+		verts.push_back(Eigen::Vector3d(1, -0.5 - 0.01, eps));
+		faces.push_back(Eigen::Vector3i(idx + 3, idx + 4, idx + 5));
+		idx += 6;
+
+		for (int i = 0; i < 6; i++)
+		{
+			vertexColors.push_back(Eigen::Vector3d(0.3, 1.0, 0.3));
+		}
+
+		verts.push_back(Eigen::Vector3d(-1, 0.5, eps));
+		verts.push_back(Eigen::Vector3d(1, 0.5, eps));
+		verts.push_back(Eigen::Vector3d(-1, 0.5 + 0.01, eps));
+
+		faces.push_back(Eigen::Vector3i(idx, idx + 1, idx + 2));
+
+		verts.push_back(Eigen::Vector3d(-1, 0.5 + 0.01, eps));
+		verts.push_back(Eigen::Vector3d(1, 0.5, eps));
+		verts.push_back(Eigen::Vector3d(1, 0.5 + 0.01, eps));
 		faces.push_back(Eigen::Vector3i(idx + 3, idx + 4, idx + 5));
 		idx += 6;
 	}
@@ -344,27 +365,15 @@ void GooHook1dGui::initSimulation()
 		outputFolderPath_ = outputFolderPath_ + "Newmark_" + std::to_string(params_.NM_beta) + "/";
 		break;
 	}
-}
 
-void GooHook1dGui::tick()
-{
-	/*message_mutex.lock();
+	if (!std::filesystem::exists(outputFolderPath_))
 	{
-		while (!mouseClicks_.empty())
-		{
-			MouseClick mc = mouseClicks_.front();
-			mouseClicks_.pop_front();
-			switch (mc.mode)
-			{
-			case SimParameters::ClickMode::CM_ADDPARTICLE:
-			{
-				model_.addParticle(mc.x, mc.y);
-				break;
-			}
-			}
-		}
+		std::filesystem::create_directories(outputFolderPath_);
 	}
-	message_mutex.unlock();*/
+
+	isPaused_ = true;
+	totalTime_ = params_.totalTime;
+	totalIterNum_ = params_.totalNumIter;
 }
 
 bool GooHook1dGui::simulateOneStep()
@@ -416,7 +425,7 @@ bool GooHook1dGui::simulateOneStep()
 	preVel = vel;
 	pos = posNew;
 	vel = velNew;
-	//std::cout << "prePos: " << pos.norm() << ", current Pos: " << pos.norm() << ", vel: " << vel.norm() << std::endl;
+	std::cout << "prePos: " << pos.norm() << ", current Pos: " << pos.norm() << ", vel: " << vel.norm() << std::endl;
 	model_.degenerateConfiguration(pos, vel, prevPos, preVel);
 	//std::cout<<"Degenerate Done"<<std::endl;
 
@@ -437,7 +446,7 @@ void GooHook1dGui::saveScreenshot(igl::opengl::glfw::Viewer& viewer, const std::
 	{
 		scale = GIFScale_;
 	}
-	viewer.data().point_size *= scale;
+	//viewer.data().point_size *= scale;
 
 	int width = static_cast<int>(scale * (viewer.core().viewport[2] - viewer.core().viewport[0]));
 	int height = static_cast<int>(scale * (viewer.core().viewport[3] - viewer.core().viewport[1]));
@@ -470,7 +479,7 @@ void GooHook1dGui::saveScreenshot(igl::opengl::glfw::Viewer& viewer, const std::
 		GifWriteFrame(&GIFWriter_, img.data(), width, height, GIFDelay_);
 	}
 
-	viewer.data().point_size /= scale;
+	//viewer.data().point_size /= scale;
 }
 
 void GooHook1dGui::saveInfoForPresent(igl::opengl::glfw::Viewer& viewer, const std::string fileName, double save_dt)

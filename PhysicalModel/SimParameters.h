@@ -20,14 +20,11 @@ struct SimParameters
         floorEnabled = true;
 		frictionEnabled = false;
 
-        clickMode = CM_ADDPARTICLE;
         particleMass = 1.0;
         maxSpringDist = 1.0;
         particleFixed = false;
 
         ceil = 0;
-
-        sawRadius= 0.1;
         TRBDF2_gamma = 1 - sqrt(2) / 2;
         NM_gamma = 0.5;
         NM_beta = 0.25;
@@ -36,9 +33,10 @@ struct SimParameters
         barrierStiffness = 1e10;
         barrierEps = 1e-2;
 
+        totalTime = 10;
+        totalNumIter = totalTime / timeStep;
     }
 
-    enum ClickMode {CM_ADDPARTICLE, CM_ADDSAW};
     enum TimeIntegrator {TI_EXPLICIT_EULER, TI_VELOCITY_VERLET, TI_RUNGE_KUTTA, TI_EXP_ROSENBROCK_EULER, TI_IMPLICIT_EULER, TI_IMPLICIT_MIDPOINT, TI_TRAPEZOID, TI_TR_BDF2, TI_BDF2, TI_NEWMARK};
     enum ModelType {MT_HARMONIC_1D, MT_POGO_STICK};
 
@@ -57,7 +55,6 @@ struct SimParameters
     bool dampingEnabled;
     double dampingStiffness;
 
-    ClickMode clickMode;
     double particleMass;
     double maxSpringDist;
     bool particleFixed;
@@ -72,6 +69,9 @@ struct SimParameters
     double barrierEps;
 
     ModelType modelType; 
+
+    double totalTime;   // total simulation time
+    int totalNumIter;   // total simulation steps
 };
 
 #endif

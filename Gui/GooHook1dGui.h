@@ -5,24 +5,18 @@
 #include <Eigen/StdVector>
 #include <Eigen/SparseCholesky>
 
-#include "PhysicsHookGui.h"
 #include "../PhysicalModel/GooHook1d.h"
 #include "../PhysicalModel/SimParameters.h"
 #include "../PhysicalModel/SceneObjects.h"
 
+#include "../include/Utils/GIF.h"
+
 // We fixed the x coordinate 
 
-class GooHook1dGui : public PhysicsHookGui
+class GooHook1dGui
 {
 public:
-	struct MouseClick
-	{
-		double x;
-		double y;
-		SimParameters::ClickMode mode;
-	};
-public:
-	GooHook1dGui() : PhysicsHookGui()
+	GooHook1dGui()
 	{ 
 		time_ = 0;
 		GIFScale_ = 0.6;
@@ -31,41 +25,41 @@ public:
 		iterNum_ = 0;
 	}
 
-	virtual void drawGUI(igl::opengl::glfw::imgui::ImGuiMenu& menu);
+	void drawGUI(igl::opengl::glfw::imgui::ImGuiMenu& menu);
+	void reset();
 
-	virtual void initSimulation();
+	void initSimulation();
 
-	virtual void mouseClicked(double x, double y, int button)
-	{
-		message_mutex.lock();
-		{
-			MouseClick mc;
-			mc.x = x;
-			mc.y = y;
-			mc.mode = params_.clickMode;
-			mouseClicks_.push_back(mc);
-		}
-		message_mutex.unlock();
-	}
+	void updateRenderGeometry();
 
-	virtual void updateRenderGeometry();
+	bool simulateOneStep();
 
-	virtual void tick();
-
-	virtual bool simulateOneStep();
-
-	virtual void renderRenderGeometry(igl::opengl::glfw::Viewer& viewer)
+	void renderRenderGeometry(igl::opengl::glfw::Viewer& viewer)
 	{
 		viewer.data().clear();
 		viewer.data().set_mesh(renderQ, renderF);
 		viewer.data().set_colors(renderC);
+	}
+
+	void save(igl::opengl::glfw::Viewer viewer)
+	{
 		saveScreenshot(viewer, outputFolderPath_ + std::to_string(iterNum_) + ".png", 1.0, false, true); // save png
-		saveScreenshot(viewer, outputFolderPath_ + std::to_string(iterNum_) + ".png", 0.5, true, false); // save gif
+		saveScreenshot(viewer, outputFolderPath_ + std::to_string(iterNum_) + ".gif", 0.5, true, false); // save gif
 	}
 
 	void updateParams()
 	{
 		model_.params_ = params_;
+	}
+
+	bool reachTheTermination()
+	{
+		return time_ >= totalTime_;
+	}
+
+	void printTime()
+	{
+		std::cout << "current time: " << time_ << std::endl;
 	}
 
 	void saveInfo(igl::opengl::glfw::Viewer& viewer, bool writePNG = true, bool writeGIF = true, int writeMesh = 1, double save_dt = 1e-2);
@@ -74,11 +68,6 @@ public:
 	
 private:
 	SimParameters params_;
-	double time_;
-	int iterNum_;
-
-	std::mutex message_mutex;
-	std::deque<MouseClick> mouseClicks_;
 
 	Eigen::MatrixXd renderQ;
 	Eigen::MatrixXi renderF;
@@ -89,7 +78,15 @@ private:
 	GifWriter GIFWriter_;
 	uint32_t GIFDelay_;
 	int GIFStep_;
+
+	double totalTime_;
+	int totalIterNum_;
+
+public:
+	bool isPaused_;
 	std::string outputFolderPath_;
+	double time_;
+	int iterNum_;
 };
 
 
