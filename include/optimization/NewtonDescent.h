@@ -7,7 +7,7 @@
 #include "LineSearch.h"
 
 
-void newtonSolver(std::function<double (Eigen::VectorXd, Eigen::VectorXd*, Eigen::SparseMatrix<double>* )> objFunc, std::function<double (Eigen::VectorXd, Eigen::VectorXd)> findMaxStep, std::function<void (Eigen::VectorXd)> postIteration, Eigen::VectorXd& x0, int numIter = 1000, double gradTol = 1e-7, double xTol = 1e-10, double fTol = 1e-15)
+void newtonSolver(std::function<double (Eigen::VectorXd, Eigen::VectorXd*, Eigen::SparseMatrix<double>* )> objFunc, std::function<double (Eigen::VectorXd, Eigen::VectorXd)> findMaxStep, std::function<void (Eigen::VectorXd)> postIteration, Eigen::VectorXd& x0, int numIter = 1000, double gradTol = 1e-7, double xTol = 1e-15, double fTol = 1e-15)
 {
 	const int DIM = x0.rows();
 	Eigen::VectorXd grad = Eigen::VectorXd::Zero(DIM);

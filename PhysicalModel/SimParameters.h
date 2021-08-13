@@ -5,7 +5,7 @@ struct SimParameters
 {
     SimParameters()
     {
-        timeStep = 0.001;
+        timeStep = 0.005;
         integrator = TI_IMPLICIT_EULER;
         NewtonMaxIters = 20;
         NewtonTolerance = 1e-8;
@@ -33,7 +33,7 @@ struct SimParameters
         barrierStiffness = 1e10;
         barrierEps = 1e-2;
 
-        totalTime = 10;
+        totalTime = 5;
         totalNumIter = totalTime / timeStep;
     }
 

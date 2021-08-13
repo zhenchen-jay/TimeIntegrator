@@ -336,33 +336,34 @@ void GooHook1dGui::initSimulation()
 	switch (params_.integrator)
 	{
 	case SimParameters::TI_EXPLICIT_EULER:
-		outputFolderPath_ = outputFolderPath_ + "Explicit_Euler/";
+		outputFolderPath_ = outputFolderPath_ + "Explicit Euler/";
 		break;
 	case SimParameters::TI_RUNGE_KUTTA:
 		outputFolderPath_ = outputFolderPath_ + "RK4/";
 		break;
 	case SimParameters::TI_VELOCITY_VERLET:
-		outputFolderPath_ = outputFolderPath_ + "Velocity_Verlet/";
+		outputFolderPath_ = outputFolderPath_ + "Velocity Verlet/";
 		break;
 	case SimParameters::TI_EXP_ROSENBROCK_EULER:
-		outputFolderPath_ = outputFolderPath_ + "Exponential_Euler/";
+		outputFolderPath_ = outputFolderPath_ + "Exponential Euler/";
 		break;
 	case SimParameters::TI_IMPLICIT_EULER:
-		outputFolderPath_ = outputFolderPath_ + "Implicit_Euler/";
+		outputFolderPath_ = outputFolderPath_ + "Implicit Euler/";
 		break;
 	case SimParameters::TI_IMPLICIT_MIDPOINT:
-		outputFolderPath_ = outputFolderPath_ + "Implicit_midpoint/";
+		outputFolderPath_ = outputFolderPath_ + "Implicit midpoint/";
 		break;
 	case SimParameters::TI_TRAPEZOID:
 		outputFolderPath_ = outputFolderPath_ + "Trapezoid/";
 		break;
 	case SimParameters::TI_TR_BDF2:
-		outputFolderPath_ = outputFolderPath_ + "TR_BDF2/";
+		outputFolderPath_ = outputFolderPath_ + "TRBDF2/";
 		break;
 	case SimParameters::TI_BDF2:
 		outputFolderPath_ = outputFolderPath_ + "BDF2/";
+		break;
 	case SimParameters::TI_NEWMARK:
-		outputFolderPath_ = outputFolderPath_ + "Newmark_" + std::to_string(params_.NM_beta) + "/";
+		outputFolderPath_ = outputFolderPath_ + "Newmark/";
 		break;
 	}
 
@@ -425,7 +426,7 @@ bool GooHook1dGui::simulateOneStep()
 	preVel = vel;
 	pos = posNew;
 	vel = velNew;
-	std::cout << "prePos: " << pos.norm() << ", current Pos: " << pos.norm() << ", vel: " << vel.norm() << std::endl;
+	//std::cout << "prePos: " << pos.norm() << ", current Pos: " << pos.norm() << ", vel: " << vel.norm() << std::endl;
 	model_.degenerateConfiguration(pos, vel, prevPos, preVel);
 	//std::cout<<"Degenerate Done"<<std::endl;
 
@@ -435,54 +436,35 @@ bool GooHook1dGui::simulateOneStep()
 	return false;
 }
 
-void GooHook1dGui::saveInfo(igl::opengl::glfw::Viewer& viewer, bool writePNG, bool writeGIF, int writeMesh, double save_dt)
+void GooHook1dGui::saveInfo()
 {
+	std::string statFileName = outputFolderPath_ + std::string("simulation_status.txt");
+	std::ofstream sfs;
+	
+	if (time_)
+		sfs.open(statFileName, std::ofstream::out | std::ofstream::app);
+	else
+		sfs.open(statFileName, std::ofstream::out);
 
-}
+	VectorXd pos, vel, prevPos, preVel;
+	model_.generateConfiguration(pos, vel, prevPos, preVel);
+	model_.assembleMassVec();
 
-void GooHook1dGui::saveScreenshot(igl::opengl::glfw::Viewer& viewer, const std::string& filePath, double scale, bool writeGIF, bool writePNG)
-{
-	if (writeGIF) 
-	{
-		scale = GIFScale_;
-	}
-	//viewer.data().point_size *= scale;
+	double springPotential = model_.computeSpringPotential(pos);
+	double gravityPotential = model_.computeGravityPotential(pos);
+	double IPCbarier = model_.computeParticleFloorBarrier(pos);
 
-	int width = static_cast<int>(scale * (viewer.core().viewport[2] - viewer.core().viewport[0]));
-	int height = static_cast<int>(scale * (viewer.core().viewport[3] - viewer.core().viewport[1]));
+	std::vector<Eigen::Triplet<double>> massTrip;
+	Eigen::SparseMatrix<double> massMat(model_.massVec_.size(), model_.massVec_.size());
 
-	// Allocate temporary buffers for image
-	Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> R(width, height);
-	Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> G(width, height);
-	Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> B(width, height);
-	Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> A(width, height);
+	for (int i = 0; i < model_.massVec_.size(); i++)
+		massTrip.push_back({ i, i , model_.massVec_(i) });
+	massMat.setFromTriplets(massTrip.begin(), massTrip.end());
 
-	// Draw the scene in the buffers
-	viewer.core().draw_buffer(viewer.data(), false, R, G, B, A);
+	double keneticEnergy = 0.5 * vel.transpose() * massMat * vel;
 
-	if (writePNG) {
-		// Save it to a PNG
-		igl::png::writePNG(R, G, B, A, filePath);
-	}
+	double center = pos.sum() / pos.size();
 
-	if (writeGIF && (iterNum_ % GIFStep_ == 0)) {
-		std::vector<uint8_t> img(width * height * 4);
-		for (int rowI = 0; rowI < width; rowI++) {
-			for (int colI = 0; colI < height; colI++) {
-				int indStart = (rowI + (height - 1 - colI) * width) * 4;
-				img[indStart] = R(rowI, colI);
-				img[indStart + 1] = G(rowI, colI);
-				img[indStart + 2] = B(rowI, colI);
-				img[indStart + 3] = A(rowI, colI);
-			}
-		}
-		GifWriteFrame(&GIFWriter_, img.data(), width, height, GIFDelay_);
-	}
-
-	//viewer.data().point_size /= scale;
-}
-
-void GooHook1dGui::saveInfoForPresent(igl::opengl::glfw::Viewer& viewer, const std::string fileName, double save_dt)
-{
-
+	sfs << time_ << " " << springPotential << " " << gravityPotential << " " << model_.params_.barrierStiffness * IPCbarier << " " << keneticEnergy << " " << center << std::endl;
+	std::cout << time_ << " " << springPotential << " " << gravityPotential << " " << model_.params_.barrierStiffness * IPCbarier << " " << keneticEnergy << " " << center << std::endl;
 }

@@ -41,12 +41,6 @@ public:
 		viewer.data().set_colors(renderC);
 	}
 
-	void save(igl::opengl::glfw::Viewer viewer)
-	{
-		saveScreenshot(viewer, outputFolderPath_ + std::to_string(iterNum_) + ".png", 1.0, false, true); // save png
-//		saveScreenshot(viewer, outputFolderPath_ + std::to_string(iterNum_) + ".gif", 0.5, true, false); // save gif
-	}
-
 	void updateParams()
 	{
 		model_.params_ = params_;
@@ -62,9 +56,7 @@ public:
 		std::cout << "current time: " << time_ << std::endl;
 	}
 
-	void saveInfo(igl::opengl::glfw::Viewer& viewer, bool writePNG = true, bool writeGIF = true, int writeMesh = 1, double save_dt = 1e-2);
-	void saveScreenshot(igl::opengl::glfw::Viewer& viewer, const std::string& filePath, double scale = 1.0, bool writeGIF = false, bool writePNG = true);
-	void saveInfoForPresent(igl::opengl::glfw::Viewer& viewer, const std::string fileName = "info.txt", double save_dt = 1e-2);
+	void saveInfo();
 	
 private:
 	SimParameters params_;
