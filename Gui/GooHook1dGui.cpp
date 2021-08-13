@@ -156,7 +156,7 @@ void GooHook1dGui::updateRenderGeometry()
 	{
 		for (int i = 0; i < 6; i++)
 		{
-			vertexColors.push_back(Eigen::Vector3d(0.3, 1.0, 0.3));
+			vertexColors.push_back(Eigen::Vector3d(0, 0, 0));
 		}
 
 		verts.push_back(Eigen::Vector3d(-1, -0.5, eps));
@@ -173,7 +173,7 @@ void GooHook1dGui::updateRenderGeometry()
 
 		for (int i = 0; i < 6; i++)
 		{
-			vertexColors.push_back(Eigen::Vector3d(0.3, 1.0, 0.3));
+			vertexColors.push_back(Eigen::Vector3d(0, 0, 0));
 		}
 
 		verts.push_back(Eigen::Vector3d(-1, 0.5, eps));

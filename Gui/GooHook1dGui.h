@@ -44,7 +44,7 @@ public:
 	void save(igl::opengl::glfw::Viewer viewer)
 	{
 		saveScreenshot(viewer, outputFolderPath_ + std::to_string(iterNum_) + ".png", 1.0, false, true); // save png
-		saveScreenshot(viewer, outputFolderPath_ + std::to_string(iterNum_) + ".gif", 0.5, true, false); // save gif
+//		saveScreenshot(viewer, outputFolderPath_ + std::to_string(iterNum_) + ".gif", 0.5, true, false); // save gif
 	}
 
 	void updateParams()

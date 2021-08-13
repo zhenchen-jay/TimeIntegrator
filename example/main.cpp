@@ -41,22 +41,7 @@ bool drawCallback(igl::opengl::glfw::Viewer &viewer)
         //
         //std::cout << "before set: \n" << viewer.data().V << std::endl;
         hook->renderRenderGeometry(viewer); 
-        hook->save(viewer);
-        //std::cout << "after set: \n" << viewer.data().V << std::endl;
-        /*double scale = 1;
-        int width = static_cast<int>(scale * (viewer.core().viewport[2] - viewer.core().viewport[0]));
-        int height = static_cast<int>(scale * (viewer.core().viewport[3] - viewer.core().viewport[1]));*/
-
-        // Allocate temporary buffers for image
-       /* Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> R(width, height);
-        Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> G(width, height);
-        Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> B(width, height);
-        Eigen::Matrix<unsigned char, Eigen::Dynamic, Eigen::Dynamic> A(width, height);*/
-
-        // Draw the scene in the buffers
-        /*viewer.core().draw_buffer(viewer.data(), false, R, G, B, A);
-        igl::png::writePNG(R, G, B, A, hook->outputFolderPath_ + std::to_string(hook->iterNum_) + ".png");*/
-        //std::cout << "after save: \n" << viewer.data().V << std::endl;
+//        hook->save(viewer); // super slow (be careful)
     }
     return false;
 }
@@ -81,7 +66,7 @@ int main(int argc, char *argv[])
   hook->renderRenderGeometry(viewer);
   viewer.core().background_color << 1.0f, 1.0f, 1.0f, 1.0f;
   viewer.core().orthographic = true;
-  viewer.core().camera_zoom = 2.15;
+  viewer.core().camera_zoom = 2.08;
   viewer.core().animation_max_fps = 60.0;
   viewer.data().show_lines = false;
   viewer.data().set_face_based(false);
