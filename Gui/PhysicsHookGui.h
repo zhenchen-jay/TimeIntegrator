@@ -6,7 +6,7 @@
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
 
-#include "../include/Utils/GIF.hpp"
+#include "../include/Utils/GIF.h"
 
 class PhysicsHookGui
 {
