@@ -44,7 +44,10 @@ public:
 	void updateParams()
 	{
 		model_.params_ = params_;
+		getOutputFolderPath();
 	}
+
+	void getOutputFolderPath();
 
 	bool reachTheTermination()
 	{
@@ -76,7 +79,7 @@ private:
 
 public:
 	bool isPaused_;
-	std::string outputFolderPath_;
+	std::string outputFolderPath_, baseFolder_;
 	double time_;
 	int iterNum_;
 };

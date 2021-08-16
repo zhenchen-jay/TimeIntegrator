@@ -20,7 +20,7 @@ void newtonSolver(std::function<double (Eigen::VectorXd, Eigen::VectorXd*, Eigen
 
 	for (int i = 0; i < numIter; i++)
 	{
-		std::cout << "\niter: " << i << std::endl;
+		//std::cout << "\niter: " << i << std::endl;
 		double f = objFunc(x0, &grad, &hessian);
 		
 		if (grad.norm() < gradTol)
@@ -55,7 +55,7 @@ void newtonSolver(std::function<double (Eigen::VectorXd, Eigen::VectorXd*, Eigen
 
 		double fnew = objFunc(x0, &grad, NULL);
 
-		std::cout << "f_old: " << f << ", f_new: " << fnew << ", grad norm: " << grad.norm() << ", variable update: " << rate * delta_x.norm() << std::endl;
+		/*std::cout << "f_old: " << f << ", f_new: " << fnew << ", grad norm: " << grad.norm() << ", variable update: " << rate * delta_x.norm() << std::endl;*/
 
 		postIteration(x0);
 

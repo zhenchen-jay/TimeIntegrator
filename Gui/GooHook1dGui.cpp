@@ -308,31 +308,17 @@ void GooHook1dGui::updateRenderGeometry()
 		renderF.row(i) = faces[i];
 }
 
-
-void GooHook1dGui::initSimulation()
+void GooHook1dGui::getOutputFolderPath()
 {
-	time_ = 0;
-	iterNum_ = 0;
-	GIFScale_ = 0.6;
-	model_ = GooHook1d(params_);
-	outputFolderPath_ = "../output/";
-
 	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
 	{
-		model_.addParticle(0, -0.3);
-		outputFolderPath_ = outputFolderPath_ + "Harmonic1d/";
+		outputFolderPath_ = baseFolder_ + "Harmonic1d/" + std::to_string(params_.timeStep) + "/";
 	}
-		
+
 	else
 	{
-		model_.addParticle(0, 0.3);
-		model_.addParticle(0, 0);
-		outputFolderPath_ = outputFolderPath_ + "Pogo_Stick/";
+		outputFolderPath_ = baseFolder_ + "Pogo_Stick/" + std::to_string(params_.timeStep) + "/";
 	}
-	double delay_10ms = std::min(10.0, params_.timeStep * 100.0);
-	GIFStep_ = static_cast<int>(std::ceil(3.0 / delay_10ms));
-	GIFDelay_ = static_cast<int>(delay_10ms * GIFStep_); // always about 3x10ms, around 33FPS
-
 	switch (params_.integrator)
 	{
 	case SimParameters::TI_EXPLICIT_EULER:
@@ -371,6 +357,31 @@ void GooHook1dGui::initSimulation()
 	{
 		std::filesystem::create_directories(outputFolderPath_);
 	}
+}
+
+void GooHook1dGui::initSimulation()
+{
+	time_ = 0;
+	iterNum_ = 0;
+	GIFScale_ = 0.6;
+	model_ = GooHook1d(params_);
+	baseFolder_ = "../output/";
+
+	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
+	{
+		model_.addParticle(0, -0.3);
+	}
+		
+	else
+	{
+		model_.addParticle(0, 0.3);
+		model_.addParticle(0, 0);
+	}
+	double delay_10ms = std::min(10.0, params_.timeStep * 100.0);
+	GIFStep_ = static_cast<int>(std::ceil(3.0 / delay_10ms));
+	GIFDelay_ = static_cast<int>(delay_10ms * GIFStep_); // always about 3x10ms, around 33FPS
+
+	getOutputFolderPath();
 
 	isPaused_ = true;
 	totalTime_ = params_.totalTime;
@@ -429,6 +440,17 @@ bool GooHook1dGui::simulateOneStep()
 	//std::cout << "prePos: " << pos.norm() << ", current Pos: " << pos.norm() << ", vel: " << vel.norm() << std::endl;
 	model_.degenerateConfiguration(pos, vel, prevPos, preVel);
 	//std::cout<<"Degenerate Done"<<std::endl;
+	double gp = model_.computeGravityPotential(pos);
+	std::vector<Eigen::Triplet<double>> massTrip;
+	Eigen::SparseMatrix<double> massMat(model_.massVec_.size(), model_.massVec_.size());
+
+	for (int i = 0; i < model_.massVec_.size(); i++)
+		massTrip.push_back({ i, i , model_.massVec_(i) });
+	massMat.setFromTriplets(massTrip.begin(), massTrip.end());
+
+	double keneticEnergy = 0.5 * vel.transpose() * massMat * vel;
+
+	std::cout << "g + k= " << gp + keneticEnergy << std::endl;
 
 	time_ += params_.timeStep;
 	iterNum_ += 1;
@@ -465,6 +487,6 @@ void GooHook1dGui::saveInfo()
 
 	double center = pos.sum() / pos.size();
 
-	sfs << time_ << " " << springPotential << " " << gravityPotential << " " << model_.params_.barrierStiffness * IPCbarier << " " << keneticEnergy << " " << center << std::endl;
-	std::cout << time_ << " " << springPotential << " " << gravityPotential << " " << model_.params_.barrierStiffness * IPCbarier << " " << keneticEnergy << " " << center << std::endl;
+	sfs << time_ << " " << springPotential << " " << gravityPotential << " " << model_.params_.barrierStiffness * IPCbarier << " " << keneticEnergy << " " << springPotential + gravityPotential + model_.params_.barrierStiffness * IPCbarier + keneticEnergy  << " " << center << std::endl;
+	std::cout << time_ << " " << springPotential << " " << gravityPotential << " " << model_.params_.barrierStiffness * IPCbarier << " " << keneticEnergy << " " << springPotential + gravityPotential + model_.params_.barrierStiffness * IPCbarier + keneticEnergy << " " << center << std::endl;
 }
