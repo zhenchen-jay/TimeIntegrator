@@ -72,6 +72,10 @@ void GooHook1dGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
 			updateParams();
 		if (ImGui::InputDouble("Spring Stiffness", &params_.springStiffness))
 			updateParams();
+		if (ImGui::InputDouble("Total Time", &params_.totalTime))
+		    updateParams();
+		if (ImGui::InputDouble("IPC Barrier stiffness", &params_.barrierStiffness))
+		    updateParams();
 	}
 	if (ImGui::CollapsingHeader("Forces", ImGuiTreeNodeFlags_DefaultOpen))
 	{
@@ -312,12 +316,12 @@ void GooHook1dGui::getOutputFolderPath()
 {
 	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
 	{
-		outputFolderPath_ = baseFolder_ + "Harmonic1d/" + std::to_string(params_.timeStep) + "/";
+		outputFolderPath_ = baseFolder_ + "Harmonic1d/" + std::to_string(params_.timeStep) + "_" + std::to_string(params_.barrierStiffness) + "/";
 	}
 
 	else
 	{
-		outputFolderPath_ = baseFolder_ + "Pogo_Stick/" + std::to_string(params_.timeStep) + "/";
+	    outputFolderPath_ = baseFolder_ + "Pogo_Stick/" + std::to_string(params_.timeStep) + "_" + std::to_string(params_.barrierStiffness) + "/";
 	}
 	switch (params_.integrator)
 	{

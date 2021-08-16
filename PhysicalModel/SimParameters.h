@@ -33,7 +33,7 @@ struct SimParameters
         barrierStiffness = 1e10;
         barrierEps = 1e-2;
 
-        totalTime = 5;
+        totalTime = 20;
         totalNumIter = totalTime / timeStep;
     }
 
