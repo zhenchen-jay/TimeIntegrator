@@ -5,8 +5,8 @@ struct SimParameters
 {
     SimParameters()
     {
-        timeStep = 0.005;
-        integrator = TI_IMPLICIT_EULER;
+        timeStep = 0.0005;
+        integrator = TI_TR_BDF2;
         NewtonMaxIters = 20;
         NewtonTolerance = 1e-8;
 

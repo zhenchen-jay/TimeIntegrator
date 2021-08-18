@@ -54,7 +54,7 @@ void GooHook1dGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
 	{
 		if (ImGui::InputDouble("Timestep", &params_.timeStep))
 			updateParams();
-		if(ImGui::Combo("Model Type", (int*)&params_.modelType, "Harmonic Ossocilation\0Mass Spring\0\0"))
+		if(ImGui::Combo("Model Type", (int*)&params_.modelType, "Harmonic Ossocilation\0Pogo Stick\0\0"))
 		{
 			initSimulation();
 		}
@@ -394,7 +394,7 @@ void GooHook1dGui::initSimulation()
 
 bool GooHook1dGui::simulateOneStep()
 {
-	VectorXd pos, vel, prevPos, preVel;
+ 	VectorXd pos, vel, prevPos, preVel;
 	model_.generateConfiguration(pos, vel, prevPos, preVel);  
 	model_.assembleMassVec();
 	//std::cout<<"Generate Done"<<std::endl;
@@ -403,37 +403,37 @@ bool GooHook1dGui::simulateOneStep()
 	switch (params_.integrator)
 	{
 	case SimParameters::TI_EXPLICIT_EULER:
-		explicitEuler<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
+		TimeIntegrator::explicitEuler<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
 		break;
 	case SimParameters::TI_RUNGE_KUTTA:
-		RoungeKutta4<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
+		TimeIntegrator::RoungeKutta4<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
 		break;
 	case SimParameters::TI_VELOCITY_VERLET:
-		velocityVerlet<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
+		TimeIntegrator::velocityVerlet<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
 		break;
 	case SimParameters::TI_EXP_ROSENBROCK_EULER:
-		exponentialRosenBrockEuler<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
+		TimeIntegrator::exponentialRosenBrockEuler<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
 		break;
 	case SimParameters::TI_IMPLICIT_EULER:
-		implicitEuler<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
+		TimeIntegrator::implicitEuler<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
 		break;
 	case SimParameters::TI_IMPLICIT_MIDPOINT:
-		implicitMidPoint<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
+		TimeIntegrator::implicitMidPoint<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
 		break;
 	case SimParameters::TI_TRAPEZOID:
-		trapezoid<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
+		TimeIntegrator::trapezoid<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
 		break;
 	case SimParameters::TI_TR_BDF2:
-		trapezoidBDF2<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew, params_.TRBDF2_gamma);
+		TimeIntegrator::trapezoidBDF2<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew, params_.TRBDF2_gamma);
 		break;
 	case SimParameters::TI_BDF2:
 		if(time_ == 0)
-			implicitEuler<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
+			TimeIntegrator::implicitEuler<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
 		else
-			BDF2<GooHook1d>(pos, vel, prevPos, preVel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
+			TimeIntegrator::BDF2<GooHook1d>(pos, vel, prevPos, preVel, params_.timeStep, model_.massVec_, model_, posNew, velNew);
 		break;
 	case SimParameters::TI_NEWMARK:
-		Newmark<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew, params_.NM_gamma, params_.NM_beta);
+		TimeIntegrator::Newmark<GooHook1d>(pos, vel, params_.timeStep, model_.massVec_, model_, posNew, velNew, params_.NM_gamma, params_.NM_beta);
 		break;
 	}
 	//update configuration into particle data structure
@@ -454,7 +454,7 @@ bool GooHook1dGui::simulateOneStep()
 
 	double keneticEnergy = 0.5 * vel.transpose() * massMat * vel;
 
-	std::cout << "g + k= " << gp + keneticEnergy << std::endl;
+	//std::cout << "g + k= " << gp + keneticEnergy << std::endl;
 
 	time_ += params_.timeStep;
 	iterNum_ += 1;
@@ -487,10 +487,10 @@ void GooHook1dGui::saveInfo()
 		massTrip.push_back({ i, i , model_.massVec_(i) });
 	massMat.setFromTriplets(massTrip.begin(), massTrip.end());
 
-	double keneticEnergy = 0.5 * vel.transpose() * massMat * vel;
+	double kineticEnergy = 0.5 * vel.transpose() * massMat * vel;
 
 	double center = pos.sum() / pos.size();
 
-	sfs << time_ << " " << springPotential << " " << gravityPotential << " " << model_.params_.barrierStiffness * IPCbarier << " " << keneticEnergy << " " << springPotential + gravityPotential + model_.params_.barrierStiffness * IPCbarier + keneticEnergy  << " " << center << std::endl;
-	std::cout << time_ << " " << springPotential << " " << gravityPotential << " " << model_.params_.barrierStiffness * IPCbarier << " " << keneticEnergy << " " << springPotential + gravityPotential + model_.params_.barrierStiffness * IPCbarier + keneticEnergy << " " << center << std::endl;
+	sfs << time_ << " " << springPotential << " " << gravityPotential << " " << model_.params_.barrierStiffness * IPCbarier << " " << kineticEnergy << " " << springPotential + gravityPotential + model_.params_.barrierStiffness * IPCbarier + kineticEnergy  << " " << center << std::endl;
+	std::cout << time_ << ", spring: " << springPotential << ", gravity: " << gravityPotential << ", IPC barrier: " << model_.params_.barrierStiffness * IPCbarier << ", kinetic: " << kineticEnergy << ", total: " << springPotential + gravityPotential + model_.params_.barrierStiffness * IPCbarier + kineticEnergy << ", com: " << center << std::endl;
 }

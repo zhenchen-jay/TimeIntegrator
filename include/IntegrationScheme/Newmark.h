@@ -4,6 +4,8 @@
 #include <Eigen/Sparse>
 #include <Eigen/Dense>
 
+namespace TimeIntegrator
+{
 /*
 * For the system we aimed to solve:
 * dx / dt = v
@@ -21,67 +23,70 @@ xtilde = x_n + h v_n + h^2 (1/2 - \beta) M^{-1} F(x_n)
 x_{n+1} =  min_y 1/2 (y - xtilde)^T M (y - xtilde) + h^2 \beta E(y)
 */
 
-template <typename Problem>
-void Newmark(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext, double gamma = 0.5, double beta = 0.25)
-{
-	std::vector<Eigen::Triplet<double>> massTrip;
-	Eigen::SparseMatrix<double> massMat(M.size(), M.size());
-
-	for (int i = 0; i < M.size(); i++)
-		massTrip.push_back({ i, i , M(i) });
-	massMat.setFromTriplets(massTrip.begin(), massTrip.end());
-    
-    massTrip.clear();
-    Eigen::SparseMatrix<double> massMatInv(M.size(), M.size());
-
-    for (int i = 0; i < M.size(); i++)
-        massTrip.push_back({ i, i , 1.0 / M(i) });
-    massMatInv.setFromTriplets(massTrip.begin(), massTrip.end());
-
-	Eigen::VectorXd fcur;
-	energyModel.computeGradient(xcur, fcur);
-	fcur *= -1;
-
-	auto newmarkEnergy = [&](Eigen::VectorXd x, Eigen::VectorXd* grad, Eigen::SparseMatrix<double>* hess)
+	template <typename Problem>
+	void Newmark(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext, double gamma = 0.5, double beta = 0.25)
 	{
-        Eigen::VectorXd xtilde = xcur + h * vcur + h * h * (0.5 - beta) * massMatInv * fcur;
-		double E = 0.5 * (x - xtilde).transpose() * massMat * (x - xtilde) + h * h * beta * energyModel.computeEnergy(x);
+		std::vector<Eigen::Triplet<double>> massTrip;
+		Eigen::SparseMatrix<double> massMat(M.size(), M.size());
 
-		if (grad)
+		for (int i = 0; i < M.size(); i++)
+			massTrip.push_back({ i, i , M(i) });
+		massMat.setFromTriplets(massTrip.begin(), massTrip.end());
+
+		massTrip.clear();
+		Eigen::SparseMatrix<double> massMatInv(M.size(), M.size());
+
+		for (int i = 0; i < M.size(); i++)
+			massTrip.push_back({ i, i , 1.0 / M(i) });
+		massMatInv.setFromTriplets(massTrip.begin(), massTrip.end());
+
+		Eigen::VectorXd fcur;
+		energyModel.computeGradient(xcur, fcur);
+		fcur *= -1;
+
+		auto newmarkEnergy = [&](Eigen::VectorXd x, Eigen::VectorXd* grad, Eigen::SparseMatrix<double>* hess)
 		{
-			energyModel.computeGradient(x, (*grad));
-			(*grad) = massMat * (x - xtilde) + h * h * beta * (*grad);
-		}
+			Eigen::VectorXd xtilde = xcur + h * vcur + h * h * (0.5 - beta) * massMatInv * fcur;
+			double E = 1.0 / 2.0 * (x - xtilde).transpose() * massMat * (x - xtilde) + beta * h * h * energyModel.computeEnergy(x);
 
-		if (hess)
+			if (grad)
+			{
+				energyModel.computeGradient(x, (*grad));
+				(*grad) = massMat * (x - xtilde) + beta * h * h * (*grad);
+			}
+
+			if (hess)
+			{
+				energyModel.computeHessian(x, (*hess));
+				(*hess) = massMat + beta * h * h * (*hess);
+			}
+
+			return E;
+		};
+
+		auto findMaxStep = [&](Eigen::VectorXd x, Eigen::VectorXd dir)
 		{
-			energyModel.computeHessian(x, (*hess));
-			(*hess) = massMat + h * h * beta * (*hess);
-		}
+			return energyModel.getMaxStepSize(x, dir);
+		};
 
-		return E;
-	};
+		auto postIteration = [&](Eigen::VectorXd x)
+		{
+			energyModel.postIteration(x);
+		};
 
-	auto findMaxStep = [&](Eigen::VectorXd x, Eigen::VectorXd dir)
-	{
-		return energyModel.getMaxStepSize(x, dir);
-	};
 
-	auto postIteration = [&](Eigen::VectorXd x)
-	{
-		energyModel.postIteration(x);
-	};
+		// newton step to find the optimal
+		xnext = xcur;
+		energyModel.preTimeStep(xnext);
+		OptSolver::newtonSolver(newmarkEnergy, findMaxStep, postIteration, xnext);
 
-	// newton step to find the optimal
-	xnext = xcur;
-	energyModel.preTimeStep(xnext);
-	newtonSolver(newmarkEnergy, findMaxStep, postIteration, xnext);
+		Eigen::VectorXd forceNext;
+		energyModel.computeGradient(xnext, forceNext);
+		forceNext *= -1;
 
-	Eigen::VectorXd forceNext;
-	energyModel.computeGradient(xnext, forceNext);
-	forceNext *= -1;
 
-	
 
-	vnext = vcur + h * massMatInv * ((1 - gamma) * fcur + gamma * forceNext);
+		vnext = vcur + h * massMatInv * ((1 - gamma) * fcur + gamma * forceNext);
+	}
+
 }

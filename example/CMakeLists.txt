@@ -3,10 +3,13 @@ file(GLOB SRCFILES
     *.cpp 
     ../PhysicalModel/*.cpp 
     ../Gui/*.cpp 
+    ../Cli/*.cpp
     ../src/Utils/*.cpp
+    ../src/Optimization/*.cpp
     *.h 
     ../PhysicalModel/*.h
-    ../Gui/*.h 
+    ../Gui/*.h
+    ../Cli/*.h 
     ../include/IntegrationScheme/*.h 
     ../include/Optimization/*.h 
     ../include/Utils/*.h)

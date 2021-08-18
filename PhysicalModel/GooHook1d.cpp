@@ -252,8 +252,13 @@ void GooHook1d::computeSpringGradient(Eigen::VectorXd q, Eigen::VectorXd& grad)
 			double displacement = q(b) - q(a);
 			double presentlen = std::abs(displacement);
 
-			grad(b) += stiffness * (presentlen - restlen) / presentlen * displacement;
-			grad(a) -= stiffness * (presentlen - restlen) / presentlen * displacement;
+			double sign = displacement > 0 ? 1.0 : -1.0;
+
+			/*grad(b) += stiffness * (presentlen - restlen) / presentlen * displacement;
+			grad(a) -= stiffness * (presentlen - restlen) / presentlen * displacement;*/
+
+			grad(b) += stiffness * (presentlen - restlen) * sign;
+			grad(a) -= stiffness * (presentlen - restlen) * sign;
 		}
 	}
 }

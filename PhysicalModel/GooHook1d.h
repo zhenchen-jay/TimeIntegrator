@@ -1,3 +1,4 @@
+#pragma once
 #include "SceneObjects.h"
 #include <deque>
 #include "SimParameters.h"
