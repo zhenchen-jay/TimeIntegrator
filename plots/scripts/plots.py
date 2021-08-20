@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 filePathPrefix = 'E:/TimeIntegrator/output/Pogo_Stick/'
-timeStepTypes = ['0.005000', '0.000500']
-timeStepLabels = ['5e-3', '5e-4']
+timeStepTypes = ['0.005000', '0.000500', '0.000050']
+timeStepLabels = ['5e-3', '5e-4', '5e-5']
 stiffnessTypes = ['10000000000.000000', '10000.000000']
 stiffnessLabels = ['1e10', '1e4']
 integratorTypes = ['Newmark', 'Implicit Euler', 'TRBDF2', 'BDF2']

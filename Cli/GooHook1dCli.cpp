@@ -169,7 +169,7 @@ bool GooHook1dCli::simulateOneStep()
 
 	double keneticEnergy = 0.5 * vel.transpose() * massMat * vel;
 
-	std::cout << "g + k= " << gp + keneticEnergy << std::endl;
+	//std::cout << "g + k= " << gp + keneticEnergy << std::endl;
 
 	time_ += params_.timeStep;
 	iterNum_ += 1;
@@ -202,10 +202,10 @@ void GooHook1dCli::saveInfo()
 		massTrip.push_back({ i, i , model_.massVec_(i) });
 	massMat.setFromTriplets(massTrip.begin(), massTrip.end());
 
-	double keneticEnergy = 0.5 * vel.transpose() * massMat * vel;
+	double kineticEnergy = 0.5 * vel.transpose() * massMat * vel;
 
 	double center = pos.sum() / pos.size();
 
-	sfs << time_ << " " << springPotential << " " << gravityPotential << " " << model_.params_.barrierStiffness * IPCbarier << " " << keneticEnergy << " " << springPotential + gravityPotential + model_.params_.barrierStiffness * IPCbarier + keneticEnergy  << " " << center << std::endl;
-	std::cout << time_ << " " << springPotential << " " << gravityPotential << " " << model_.params_.barrierStiffness * IPCbarier << " " << keneticEnergy << " " << springPotential + gravityPotential + model_.params_.barrierStiffness * IPCbarier + keneticEnergy << " " << center << std::endl;
+	sfs << time_ << " " << springPotential << " " << gravityPotential << " " << model_.params_.barrierStiffness * IPCbarier << " " << kineticEnergy << " " << springPotential + gravityPotential + model_.params_.barrierStiffness * IPCbarier + kineticEnergy  << " " << center << std::endl;
+	std::cout << time_ << ", spring: " << springPotential << ", gravity: " << gravityPotential << ", IPC barrier: " << model_.params_.barrierStiffness * IPCbarier << ", kinetic: " << kineticEnergy << ", total: " << springPotential + gravityPotential + model_.params_.barrierStiffness * IPCbarier + kineticEnergy << ", com: " << center << std::endl;
 }
