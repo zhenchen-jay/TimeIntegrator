@@ -58,6 +58,8 @@ public:
 	void preTimeStep(Eigen::VectorXd q);	// update the stiffness
 	void postIteration(Eigen::VectorXd q);	// update the stiffness
 
+	double getCurrentConnectorLen(Eigen::VectorXd q, int cid);
+
 public:
 	std::vector<Particle, Eigen::aligned_allocator<Particle> > particles_;
 	std::vector<Connector1d*> connectors_;

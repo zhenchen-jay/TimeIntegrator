@@ -5,12 +5,12 @@ struct SimParameters
 {
     SimParameters()
     {
-        timeStep = 0.0005;
-        integrator = TI_TR_BDF2;
+        timeStep = 0.005;
+        integrator = TI_NEWMARK;
         NewtonMaxIters = 20;
         NewtonTolerance = 1e-8;
 
-        gravityEnabled = true;
+        gravityEnabled = false;
         gravityG = -9.8;
         springsEnabled = true;
         springStiffness = 1e3;
@@ -29,7 +29,7 @@ struct SimParameters
         NM_gamma = 0.5;
         NM_beta = 0.25;
 
-        modelType = MT_POGO_STICK;
+        modelType = MT_HARMONIC_1D;
         barrierStiffness = 1e10;
         barrierEps = 1e-2;
 

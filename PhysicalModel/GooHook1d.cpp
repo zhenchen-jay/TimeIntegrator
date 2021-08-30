@@ -87,6 +87,35 @@ void GooHook1d::degenerateConfiguration(Eigen::VectorXd pos, Eigen::VectorXd vel
 }
 
 
+double GooHook1d::getCurrentConnectorLen(Eigen::VectorXd q, int cid)
+{
+	double len = 0;
+	if (cid < 0 || cid >= connectors_.size())
+	{
+		std::cerr << "connector index is out of range." << std::endl;
+		exit(1);
+	}
+
+	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
+	{
+		Spring1d* connector = static_cast<Spring1d*> (connectors_[cid]);
+		int p = connector->p;
+		double presentDis = std::abs(q(p) - params_.ceil);
+		len = std::abs(presentDis);
+	}
+	else
+	{
+		Spring* connector = static_cast<Spring*> (fullConnectors_[cid]);
+		int a = connector->p1;
+		int b = connector->p2;
+
+		double presentlen = std::abs(q(b) - q(a));
+		len = presentlen;
+	}
+	return len;
+	
+}
+
 //////////////////////////////////////////////////////////////////////////////////////
 ///         Compute potential energy, gradient and hessian
 //////////////////////////////////////////////////////////////////////////////////////

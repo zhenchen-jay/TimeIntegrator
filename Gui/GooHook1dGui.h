@@ -59,6 +59,8 @@ public:
 		std::cout << "current time: " << time_ << std::endl;
 	}
 
+	bool computePeriod(Eigen::VectorXd q, std::vector<double>& periods);
+
 	void saveInfo();
 	
 private:
@@ -76,6 +78,11 @@ private:
 
 	double totalTime_;
 	int totalIterNum_;
+
+	std::vector<double> lastLens_;
+	std::vector<double> lastPassRestPointTime_;
+
+	bool saveperiodFile_;
 
 public:
 	bool isPaused_;
