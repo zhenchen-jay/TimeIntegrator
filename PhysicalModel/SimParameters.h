@@ -5,13 +5,14 @@ struct SimParameters
 {
     SimParameters()
     {
-        timeStep = 0.005;
+        timeStep = 5e-4;
         integrator = TI_NEWMARK;
         NewtonMaxIters = 20;
         NewtonTolerance = 1e-8;
 
         gravityEnabled = false;
-        gravityG = -9.8;
+        //gravityG = -9.8;
+        gravityG = 0;
         springsEnabled = true;
         springStiffness = 1e3;
         maxSpringStrain = 0.2;
@@ -22,7 +23,6 @@ struct SimParameters
 
         particleMass = 1.0;
         maxSpringDist = 1.0;
-        particleFixed = false;
 
         ceil = 0;
         TRBDF2_gamma = 1 - sqrt(2) / 2;
@@ -35,6 +35,8 @@ struct SimParameters
 
         totalTime = 20;
         totalNumIter = totalTime / timeStep;
+
+        numSegs = 2;
     }
 
     enum TimeIntegrator {TI_EXPLICIT_EULER, TI_VELOCITY_VERLET, TI_RUNGE_KUTTA, TI_EXP_ROSENBROCK_EULER, TI_IMPLICIT_EULER, TI_IMPLICIT_MIDPOINT, TI_TRAPEZOID, TI_TR_BDF2, TI_BDF2, TI_NEWMARK};
@@ -57,7 +59,6 @@ struct SimParameters
 
     double particleMass;
     double maxSpringDist;
-    bool particleFixed;
     double sawRadius;
 
     double ceil;
@@ -72,6 +73,8 @@ struct SimParameters
 
     double totalTime;   // total simulation time
     int totalNumIter;   // total simulation steps
+
+    int numSegs;    // number of segments
 };
 
 #endif

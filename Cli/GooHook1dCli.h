@@ -39,7 +39,14 @@ public:
 	}
 
 	void saveInfo();
-	
+	bool GooHook1dCli::computePeriod(Eigen::VectorXd q, std::vector<double>& periods);
+
+private:
+	std::vector<double> lastLens_;
+	std::vector<double> lastPassRestPointTime_;
+
+	bool saveperiodFile_;
+
 public:
 	SimParameters params_;
 

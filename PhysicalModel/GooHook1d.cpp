@@ -11,18 +11,18 @@ using namespace Eigen;
 ///                         Add objects
 //////////////////////////////////////////////////////////////////////////////////////
 
-void GooHook1d::addParticle(double x, double y)
+void GooHook1d::addParticle(double x, double y, bool isFixed, double maxEffectDist)
 {
 	Vector2d newpos(x,y);
 	double mass = params_.particleMass;
-	if(params_.particleFixed)
+	if(isFixed)
 		mass = std::numeric_limits<double>::infinity();
 
 	int newid = particles_.size();
-	particles_.push_back(Particle(newpos, mass, params_.particleFixed, false));
+	particles_.push_back(Particle(newpos, mass, isFixed, false));
 
 	int nParticles = particles_.size();
-	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
+	/*if (params_.modelType == SimParameters::MT_HARMONIC_1D)
 	{
 		double dist = std::abs(particles_[newid].pos(1) - params_.ceil);
 		dist *= 0.5;
@@ -30,20 +30,67 @@ void GooHook1d::addParticle(double x, double y)
 		connectors_.push_back(spring);
 	}
 	else 
-	{
+	{*/
 		for (int i = 0; i < nParticles - 1; i++)
 		{
 			double dist = (newpos - particles_[i].pos).norm();
 			if (std::abs(particles_[i].pos(0) - particles_[newid].pos(0)) < 1e-6)
 			{
-				//dist *= 0.5;
-				auto spring = new Spring(newid, i, 0, params_.springStiffness, dist, true);
-				fullConnectors_.push_back(spring);
+				if (maxEffectDist > 0)
+				{
+					if (dist < maxEffectDist)
+					{
+						if (params_.modelType == SimParameters::MT_HARMONIC_1D)
+							dist *= 0.5;
+						auto spring = new Spring(newid, i, 0, params_.springStiffness, dist, true);
+						fullConnectors_.push_back(spring);
+					}
+
+				}
+				else
+				{
+					if (params_.modelType == SimParameters::MT_HARMONIC_1D)
+						dist *= 0.5;
+					auto spring = new Spring(newid, i, 0, params_.springStiffness, dist, true);
+					fullConnectors_.push_back(spring);
+				}
+				
 			}
 		}
-	}
+	//}
 	
 }
+
+//////////////////////////////////////////////////////////////////////////////////////
+///                         Projection matrix
+//////////////////////////////////////////////////////////////////////////////////////
+void GooHook1d::updateProjM()
+{
+	int nParticles = particles_.size();
+	int row = 0;
+	
+	std::vector<Eigen::Triplet<double>> T;
+	indexMap_.resize(nParticles, -1);
+
+	for (int i = 0; i < nParticles; i++)
+	{
+		if (particles_[i].fixed)
+			continue;
+		else
+		{
+			T.push_back(Eigen::Triplet<double>(row, i, 1.0));
+			indexMap_[i] = row;
+			indexInvMap_.push_back(i);
+			row++;
+		}
+	}
+
+	projM_.resize(row, nParticles);
+	projM_.setFromTriplets(T.begin(), T.end());
+
+	unProjM_ = projM_.transpose();
+}
+
 
 //////////////////////////////////////////////////////////////////////////////////////
 ///             Generate/Degenerate Configuration
@@ -52,24 +99,26 @@ void GooHook1d::addParticle(double x, double y)
 void GooHook1d::generateConfiguration(Eigen::VectorXd &pos, Eigen::VectorXd &vel, Eigen::VectorXd &prevPos, Eigen::VectorXd& preVel)
 {
 	int nParticles =  particles_.size();
-	pos.resize(nParticles);
-	vel.resize(nParticles);
-	prevPos.resize(nParticles);
-	preVel.resize(nParticles);
+	int nVals = projM_.rows();
+	pos.resize(nVals);
+	vel.resize(nVals);
+	prevPos.resize(nVals);
+	preVel.resize(nVals);
 	
 	for(int i = 0; i < nParticles; i++)
 	{
-		prevPos(i) = particles_[i].prevpos(1);
-		preVel(i) = particles_[i].preVel(1);
+		if (particles_[i].fixed)
+			continue;
+		prevPos(indexMap_[i]) = particles_[i].prevpos(1);
+		preVel(indexMap_[i]) = particles_[i].preVel(1);
 
-		pos(i) = particles_[i].pos(1);
-		vel(i) = particles_[i].vel(1);
+		pos(indexMap_[i]) = particles_[i].pos(1);
+		vel(indexMap_[i]) = particles_[i].vel(1);
 	}
 }
 
 void GooHook1d::degenerateConfiguration(Eigen::VectorXd pos, Eigen::VectorXd vel, Eigen::VectorXd prevPos, Eigen::VectorXd preVel)
 {
-	assert(pos.size() == particles_.size());
 	int nParticles = particles_.size();
 	for(int i = 0; i < nParticles; i++)
 	{
@@ -81,8 +130,8 @@ void GooHook1d::degenerateConfiguration(Eigen::VectorXd pos, Eigen::VectorXd vel
 		particles_[i].prevpos = particles_[i].pos;
 		particles_[i].preVel = particles_[i].vel;
 
-		particles_[i].pos(1) = pos(i);
-		particles_[i].vel(1) = vel(i);
+		particles_[i].pos(1) = pos(indexMap_[i]);
+		particles_[i].vel(1) = vel(indexMap_[i]);
 	}
 }
 
@@ -90,30 +139,24 @@ void GooHook1d::degenerateConfiguration(Eigen::VectorXd pos, Eigen::VectorXd vel
 double GooHook1d::getCurrentConnectorLen(Eigen::VectorXd q, int cid)
 {
 	double len = 0;
-	if (cid < 0 || cid >= connectors_.size())
+	if (cid < 0 || cid >= fullConnectors_.size())
 	{
 		std::cerr << "connector index is out of range." << std::endl;
 		exit(1);
 	}
 
-	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
-	{
-		Spring1d* connector = static_cast<Spring1d*> (connectors_[cid]);
-		int p = connector->p;
-		double presentDis = std::abs(q(p) - params_.ceil);
-		len = std::abs(presentDis);
-	}
-	else
-	{
-		Spring* connector = static_cast<Spring*> (fullConnectors_[cid]);
-		int a = connector->p1;
-		int b = connector->p2;
 
-		double presentlen = std::abs(q(b) - q(a));
-		len = presentlen;
-	}
+	Spring* connector = static_cast<Spring*> (fullConnectors_[cid]);
+	int a = indexMap_[connector->p1];
+	int b = indexMap_[connector->p2];
+
+	double va = (a == -1) ? particles_[connector->p1].pos(1) : q(a);
+	double vb = (b == -1) ? particles_[connector->p2].pos(1) : q(b);
+
+	double presentlen = std::abs(vb - va);
+	len = presentlen;
 	return len;
-	
+
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -140,12 +183,14 @@ double GooHook1d::computeGravityPotential(Eigen::VectorXd q)
 {
 	int nParticles = particles_.size();
 	double gpotential = 0.0;
+
+	Eigen::VectorXd unProjq = unProjM_ * q;
 	
 	for (size_t i = 0; i < nParticles; i++)
 	{
 		if (particles_[i].fixed)
 			continue;
-		gpotential -= params_.gravityG * particles_[i].mass * q(i);
+		gpotential -= params_.gravityG * particles_[i].mass * q(indexMap_[i]);
 	}
 	
 	return gpotential;
@@ -154,34 +199,18 @@ double GooHook1d::computeGravityPotential(Eigen::VectorXd q)
 double GooHook1d::computeSpringPotential(Eigen::VectorXd q)
 {
 	double spotential = 0.0;
-	
-	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
+	for (std::vector<Connector*>::iterator it = fullConnectors_.begin(); it != fullConnectors_.end(); ++it)
 	{
+		double restlen = static_cast<Spring*>(*it)->restlen;
+		int a = (*it)->p1;
+		int b = (*it)->p2;
 
-		for (std::vector<Connector1d*>::iterator it = connectors_.begin(); it != connectors_.end(); ++it)
-		{
-			double restDis = static_cast<Spring1d*>(*it)->restDis;
-			int p = (*it)->p;
+		double stiffness = params_.springStiffness / restlen;
+		double va = indexMap_[a] != -1 ? q(indexMap_[a]) : particles_[a].pos(1);
+		double vb = indexMap_[b] != -1 ? q(indexMap_[b]) : particles_[b].pos(1);
+		double presentlen = std::abs(vb - va);
 
-			double stiffness = params_.springStiffness / std::abs(restDis);
-			double presentDis = std::abs(q(p) - params_.ceil);
-
-			spotential = spotential + 0.5 * stiffness * (presentDis - restDis) * (presentDis - restDis);
-		}
-	}
-	else
-	{
-		for (std::vector<Connector*>::iterator it = fullConnectors_.begin(); it != fullConnectors_.end(); ++it)
-		{
-			double restlen = static_cast<Spring*>(*it)->restlen;
-			int a = (*it)->p1;
-			int b = (*it)->p2;
-
-			double stiffness = params_.springStiffness / restlen;
-			double presentlen = std::abs(q(b) - q(a));
-
-			spotential = spotential + 0.5 * stiffness * (presentlen - restlen) * (presentlen - restlen);
-		}
+		spotential = spotential + 0.5 * stiffness * (presentlen - restlen) * (presentlen - restlen);
 	}
 
 	return spotential;
@@ -193,15 +222,17 @@ double GooHook1d::computeParticleFloorBarrier(Eigen::VectorXd q)
 	int nParticles = particles_.size();
 	for (int i = 0; i < nParticles; i++)
 	{
+		if (particles_[i].fixed)
+			continue;
 		double radius = 0.02 * std::sqrt(particles_[i].mass);
-		if (q(i) <= -0.5 + radius + params_.barrierEps || q(i) >= 0.5 - radius - params_.barrierEps)
+		if (q(indexMap_[i]) <= -0.5 + radius + params_.barrierEps || q(indexMap_[i]) >= 0.5 - radius - params_.barrierEps)
 		{
-			double pos = q(i);
+			double pos = q(indexMap_[i]);
 			double dist = params_.barrierEps;
-			if (q(i) <= -0.5 + radius + params_.barrierEps)
-				dist = q(i) + 0.5 - radius;
+			if (q(indexMap_[i]) <= -0.5 + radius + params_.barrierEps)
+				dist = q(indexMap_[i]) + 0.5 - radius;
 			else
-				dist = 0.5 - radius - q(i);
+				dist = 0.5 - radius - q(indexMap_[i]);
 			barrier += -(dist - params_.barrierEps) * (dist - params_.barrierEps) * std::log(dist / params_.barrierEps);
 		}
 	}
@@ -245,7 +276,7 @@ void GooHook1d::computeGravityGradient(Eigen::VectorXd q, Eigen::VectorXd& grad)
 	{
 		if (particles_[i].fixed)
 			continue;
-		grad(i) = -params_.gravityG * particles_[i].mass;
+		grad(indexMap_[i]) = -params_.gravityG * particles_[i].mass;
 	}
 }
 
@@ -253,42 +284,26 @@ void GooHook1d::computeGravityGradient(Eigen::VectorXd q, Eigen::VectorXd& grad)
 void GooHook1d::computeSpringGradient(Eigen::VectorXd q, Eigen::VectorXd& grad)
 {
 	grad = Eigen::VectorXd::Zero(q.size());
-	assert(q.size() == particles_.size());
-
-	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
+	for (std::vector<Connector*>::iterator it = fullConnectors_.begin(); it != fullConnectors_.end(); ++it)
 	{
-		for (std::vector<Connector1d*>::iterator it = connectors_.begin(); it != connectors_.end(); ++it)
-		{
-			double restDis = static_cast<Spring1d*>(*it)->restDis;
-			int p = (*it)->p;
+		double restlen = static_cast<Spring*>(*it)->restlen;
+		int a = indexMap_[(*it)->p1];
+		int b = indexMap_[(*it)->p2];
 
-			double stiffness = params_.springStiffness / std::abs(restDis);
-			double displacement = q(p) - params_.ceil;
-			double presentlen = std::abs(displacement);
+		double stiffness = params_.springStiffness / restlen;
 
-			grad(p) += stiffness * (presentlen - restDis) * displacement / presentlen;
-		}
-	}
-	else
-	{
-		for (std::vector<Connector*>::iterator it = fullConnectors_.begin(); it != fullConnectors_.end(); ++it)
-		{
-			double restlen = static_cast<Spring*>(*it)->restlen;
-			int a = (*it)->p1;
-			int b = (*it)->p2;
+		double va = (a == -1) ? particles_[(*it)->p1].pos(1) : q(a);
+		double vb = (b == -1) ? particles_[(*it)->p2].pos(1) : q(b);
+	
+		double displacement = vb - va;
+		double presentlen = std::abs(displacement);
 
-			double stiffness = params_.springStiffness / restlen;
-			double displacement = q(b) - q(a);
-			double presentlen = std::abs(displacement);
+		double sign = displacement > 0 ? 1.0 : -1.0;
 
-			double sign = displacement > 0 ? 1.0 : -1.0;
-
-			/*grad(b) += stiffness * (presentlen - restlen) / presentlen * displacement;
-			grad(a) -= stiffness * (presentlen - restlen) / presentlen * displacement;*/
-
+		if(b != -1)
 			grad(b) += stiffness * (presentlen - restlen) * sign;
+		if(a != -1)
 			grad(a) -= stiffness * (presentlen - restlen) * sign;
-		}
 	}
 }
 
@@ -296,20 +311,23 @@ void GooHook1d::computeSpringGradient(Eigen::VectorXd q, Eigen::VectorXd& grad)
 void GooHook1d::computeParticleFloorGradeint(Eigen::VectorXd q, Eigen::VectorXd& grad)
 {
 	int nParticles = particles_.size();
-	grad.setZero(nParticles);
+	grad.setZero(q.size());
 	for (int i = 0; i < nParticles; i++)
 	{
+		if (particles_[i].fixed)
+			continue;
 		double radius = 0.02 * std::sqrt(particles_[i].mass);
-		if (q(i) <= -0.5 + radius + params_.barrierEps || q(i) >= 0.5 - radius - params_.barrierEps)
+		int id = indexMap_[i];
+		if (q(id) <= -0.5 + radius + params_.barrierEps || q(id) >= 0.5 - radius - params_.barrierEps)
 		{
 			double dist = params_.barrierEps;
-			if (q(i) <= -0.5 + radius + params_.barrierEps)
-				dist = q(i) + 0.5 - radius;
+			if (q(id) <= -0.5 + radius + params_.barrierEps)
+				dist = q(id) + 0.5 - radius;
 			else
-				dist = 0.5 - radius - q(i);
-			grad(i) += -(dist - params_.barrierEps) * (2 * std::log(dist / params_.barrierEps) - params_.barrierEps / dist + 1);
-			if (q(i) >= 0.5 - radius - params_.barrierEps)
-				grad(i) *= -1;
+				dist = 0.5 - radius - q(id);
+			grad(id) += -(dist - params_.barrierEps) * (2 * std::log(dist / params_.barrierEps) - params_.barrierEps / dist + 1);
+			if (q(id) >= 0.5 - radius - params_.barrierEps)
+				grad(id) *= -1;
 		}
 	}
 }
@@ -338,38 +356,27 @@ void GooHook1d::computeHessian(Eigen::VectorXd q, Eigen::SparseMatrix<double>& h
 
 void GooHook1d::computeSpringHessian(Eigen::VectorXd q, std::vector<Eigen::Triplet<double> >& hessian)
 {
-	assert(q.size() == particles_.size());
-
-	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
+	for (std::vector<Connector*>::iterator it = fullConnectors_.begin(); it != fullConnectors_.end(); ++it)
 	{
-		for (std::vector<Connector1d*>::iterator it = connectors_.begin(); it != connectors_.end(); ++it)
+		double restlen = static_cast<Spring*>(*it)->restlen;
+		int a = indexMap_[(*it)->p1];
+		int b = indexMap_[(*it)->p2];
+		
+
+		double stiffness = params_.springStiffness / restlen;
+
+		if (a != -1)
 		{
-			double restDis = static_cast<Spring1d*>(*it)->restDis;
-			int p = (*it)->p;
-
-			double stiffness = params_.springStiffness / std::abs(restDis);
-
-			hessian.push_back(Eigen::Triplet<double>(p, p, stiffness));
-		}
-	}
-	else
-	{
-		for (std::vector<Connector*>::iterator it = fullConnectors_.begin(); it != fullConnectors_.end(); ++it)
-		{
-			double restlen = static_cast<Spring*>(*it)->restlen;
-			int a = (*it)->p1;
-			int b = (*it)->p2;
-			assert(a != b);
-
-			double stiffness = params_.springStiffness / restlen;
-
 			hessian.push_back(Eigen::Triplet<double>(a, a, stiffness));
-			hessian.push_back(Eigen::Triplet<double>(a, b, -stiffness));
-
-			hessian.push_back(Eigen::Triplet<double>(b, a, -stiffness));
-			hessian.push_back(Eigen::Triplet<double>(b, b, stiffness));
-
+			if (b != -1)
+			{
+				hessian.push_back(Eigen::Triplet<double>(a, b, -stiffness));
+				hessian.push_back(Eigen::Triplet<double>(b, a, -stiffness));
+				hessian.push_back(Eigen::Triplet<double>(b, b, stiffness));
+			}
 		}
+		else
+			hessian.push_back(Eigen::Triplet<double>(b, b, stiffness));
 	}
 }
 
@@ -379,16 +386,19 @@ void GooHook1d::computeParticleFloorHessian(Eigen::VectorXd q, std::vector<Eigen
 
 	for (int i = 0; i < nParticles; i++)
 	{
+		if (particles_[i].fixed)
+			continue;
 		double radius = 0.02 * std::sqrt(particles_[i].mass);
-		if (q(i) <= -0.5 + radius + params_.barrierEps || q(i) >= 0.5 - radius - params_.barrierEps)
+		int id = indexMap_[i];
+		if (q(id) <= -0.5 + radius + params_.barrierEps || q(id) >= 0.5 - radius - params_.barrierEps)
 		{
 			double dist = params_.barrierEps;
-			if (q(i) <= -0.5 + radius + params_.barrierEps)
-				dist = q(i) + 0.5 - radius;
+			if (q(id) <= -0.5 + radius + params_.barrierEps)
+				dist = q(id) + 0.5 - radius;
 			else
-				dist = 0.5 - radius - q(i);
+				dist = 0.5 - radius - q(id);
 			double value = -2 * std::log(dist / params_.barrierEps) + (params_.barrierEps - dist) * (params_.barrierEps + 3 * dist) / (dist * dist);
-			hessian.push_back(Eigen::Triplet<double>(i, i, value));
+			hessian.push_back(Eigen::Triplet<double>(id, id, value));
 		}
 	}
 }
@@ -396,50 +406,18 @@ void GooHook1d::computeParticleFloorHessian(Eigen::VectorXd q, std::vector<Eigen
 void GooHook1d::assembleMassVec()
 {
 	int nParticles = particles_.size();
+	int nVals = projM_.rows();
 
-	massVec_.setZero(nParticles);
+	massVec_.setZero(nVals);
 
 	std::vector<Eigen::Triplet<double>> coef;
 
 	for (size_t i = 0; i < nParticles; i++)
 	{
-		massVec_(i) = particles_[i].mass;
+		if (particles_[i].fixed)
+			continue;
+		massVec_(indexMap_[i]) = particles_[i].mass;
 	}
-}
-
-//////////////////////////////////////////////////////////////////////////////////////
-///  Removing broken springs
-//////////////////////////////////////////////////////////////////////////////////////
-
-void GooHook1d::removeSnappedSprings()
-{
-	std::vector<int> remainingSpring;
-	int nConnectors = connectors_.size();
-	
-	for(int i = 0; i < nConnectors; i++)
-	{
-		Spring1d & curSpring = *(static_cast<Spring1d *> (connectors_[i]));
-		if(curSpring.canSnap)
-		{
-			double curLen = std::abs( particles_[curSpring.p].pos(1) - params_.ceil );
-			double strainTerm = (curLen - std::abs(curSpring.restDis))/ std::abs(curSpring.restDis);
-			if(strainTerm <= params_.maxSpringStrain)
-			{
-				remainingSpring.push_back(i);
-			}
-		}
-	}
-	
-	int nRemainingSpring = remainingSpring.size();
-	if(nRemainingSpring == nConnectors)
-		return;
-	std::vector<Connector1d* > remainingConnectors;
-	for(int i = 0; i<nRemainingSpring; i++)
-	{
-		remainingConnectors.push_back(connectors_[remainingSpring[i]]);
-	}
-	std::swap(connectors_, remainingConnectors);
-	
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
@@ -609,7 +587,7 @@ void GooHook1d::testGradientDifferential()
 void GooHook1d::saveConfiguration(std::string filePath)
 {
 	int nParticles = particles_.size();
-	int nConnectors = connectors_.size();
+	int nConnectors = fullConnectors_.size();
 	std::ofstream outfile(filePath, std::ios::trunc);
 	
 	outfile<<nParticles<<"\n";
@@ -632,8 +610,10 @@ void GooHook1d::saveConfiguration(std::string filePath)
 	
 	for(int i=0;i<nConnectors;i++)
 	{
-		outfile<<connectors_[i]->p<<"\n";
-		outfile<<connectors_[i]->mass<<"\n";
+		outfile << fullConnectors_[i]->p1 << "\n";
+		outfile << fullConnectors_[i]->p2 << "\n";
+		outfile << fullConnectors_[i]->mass << "\n";
+		outfile << static_cast<Spring*>(fullConnectors_[i])->restlen << "\n";
 	}
 	outfile.close();
 }
@@ -650,7 +630,7 @@ void GooHook1d::loadConfiguration(std::string filePath)
 	infile >> nConnectors;
 	
 	particles_.clear();
-	connectors_.clear();
+	fullConnectors_.clear();
 	
 	for(int i = 0; i < nParticles; i++)
 	{
@@ -676,12 +656,15 @@ void GooHook1d::loadConfiguration(std::string filePath)
 	
 	for(int i = 0; i < nConnectors; i++)
 	{
-		int p;
+		int p1;
+		int p2;
 		double mass;
-		infile >> p;
+		double restLen;
+		infile >> p1;
+		infile >> p2;
 		infile >> mass;
-		double dist = particles_[p].pos(1) - params_.ceil;
-		auto spring = new Spring1d(p, mass, params_.springStiffness, dist, true);
-		connectors_.push_back(spring);
+		infile >> restLen;
+		auto spring = new Spring(p1, p2, mass, params_.springStiffness, restLen, true);
+		fullConnectors_.push_back(spring);
 	}
 }

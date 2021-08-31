@@ -15,16 +15,14 @@ public:
 	GooHook1d(SimParameters simParams)
 	{
 		particles_.clear();
-		for (std::vector<Connector1d*>::iterator it = connectors_.begin(); it != connectors_.end(); ++it)
-			delete* it;
 		for (std::vector<Connector*>::iterator it = fullConnectors_.begin(); it != fullConnectors_.end(); ++it)
 			delete* it;
-		connectors_.clear();
 		params_ = simParams;
 	}
 
-	void addParticle(double x, double y);
-	void removeSnappedSprings();
+	void addParticle(double x, double y, bool isFixed = false, double maxEffectDist = -1);
+	void updateProjM();
+
 
 	void generateConfiguration(Eigen::VectorXd& pos, Eigen::VectorXd& vel, Eigen::VectorXd& prevPos, Eigen::VectorXd& preVel);
 	void degenerateConfiguration(Eigen::VectorXd pos, Eigen::VectorXd vel, Eigen::VectorXd prevPos, Eigen::VectorXd preVel);
@@ -62,7 +60,7 @@ public:
 
 public:
 	std::vector<Particle, Eigen::aligned_allocator<Particle> > particles_;
-	std::vector<Connector1d*> connectors_;
+	/*std::vector<Connector1d*> connectors_;*/
 	std::vector<Connector* > fullConnectors_;
 	SimParameters params_;
 
@@ -77,4 +75,8 @@ public:
 private:
 	void updateCloseParticles(Eigen::VectorXd q, double d_eps);
 	std::vector<std::pair<int, double>> closeParticles_;
+	Eigen::SparseMatrix<double> projM_;
+	Eigen::SparseMatrix<double> unProjM_;
+	std::vector<int> indexMap_;
+	std::vector<int> indexInvMap_;
 };

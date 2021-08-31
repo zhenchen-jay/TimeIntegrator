@@ -58,6 +58,10 @@ void GooHook1dGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
 		{
 			initSimulation();
 		}
+		if (ImGui::InputInt("Number of Segments", &params_.numSegs))
+		{
+			initSimulation();
+		}
 		if (ImGui::Combo("Integrator", (int*)&params_.integrator, "Explicit Euler\0Velocity Verlet\0Runge Kutta 4\0Exp Euler\0Implicit Euler\0Implicit Midpoint\0Trapzoid\0TRBDF2\0BDF2\0Newmark\0\0"))
 			updateParams();
 		if (ImGui::InputDouble("Newmark Gamma", &params_.NM_gamma))
@@ -98,15 +102,13 @@ void GooHook1dGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu &menu)
 	}
 
 
-	if (ImGui::CollapsingHeader("New Particles", ImGuiTreeNodeFlags_DefaultOpen))
+	if (ImGui::CollapsingHeader("Particles Params", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		if (ImGui::Checkbox("Is Fixed", &params_.particleFixed))
-			updateParams();
 		if (ImGui::InputDouble("Mass", &params_.particleMass))
 			updateParams();
 	}
 
-	if (ImGui::CollapsingHeader("New Springs", ImGuiTreeNodeFlags_DefaultOpen))
+	if (ImGui::CollapsingHeader("Springs Info", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		if (ImGui::InputDouble("Max Spring Dist", &params_.maxSpringDist))
 			updateParams();
@@ -156,7 +158,7 @@ void GooHook1dGui::updateRenderGeometry()
 	double eps = 1e-4;
 
 
-	if(params_.floorEnabled)
+	if (params_.floorEnabled)
 	{
 		for (int i = 0; i < 6; i++)
 		{
@@ -193,84 +195,50 @@ void GooHook1dGui::updateRenderGeometry()
 		idx += 6;
 	}
 
-	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
+
+	for (std::vector<Connector*>::iterator it = model_.fullConnectors_.begin(); it != model_.fullConnectors_.end(); ++it)
 	{
-		for (std::vector<Connector1d*>::iterator it = model_.connectors_.begin(); it != model_.connectors_.end(); ++it)
-		{
-			Eigen::Vector3d color;
-			if ((*it)->associatedBendingStencils.empty())
-				color << 0.0, 0.0, 1.0;
-			else
-				color << 0.75, 0.5, 0.75;
-			Vector2d sourcepos = model_.particles_[(*it)->p].pos;
-			sourcepos(1) = params_.ceil;
-			Vector2d destpos = model_.particles_[(*it)->p].pos;
+		Eigen::Vector3d color;
+		if ((*it)->associatedBendingStencils.empty())
+			color << 0.0, 0.0, 1.0;
+		else
+			color << 0.75, 0.5, 0.75;
+		Vector2d sourcepos = model_.particles_[(*it)->p1].pos;
+		Vector2d destpos = model_.particles_[(*it)->p2].pos;
 
-			Vector2d vec = destpos - sourcepos;
-			Vector2d perp(-vec[1], vec[0]);
-			perp /= perp.norm();
+		Vector2d vec = destpos - sourcepos;
+		Vector2d perp(-vec[1], vec[0]);
+		perp /= perp.norm();
 
-			double dist = (sourcepos - destpos).norm();
+		double dist = (sourcepos - destpos).norm();
 
-			double width = baselinewidth / (1.0 + 20.0 * dist * dist);
+		double width = baselinewidth / (1.0 + 20.0 * dist * dist);
 
-			for (int i = 0; i < 4; i++)
-				vertexColors.push_back(color);
+		for (int i = 0; i < 4; i++)
+			vertexColors.push_back(color);
 
-			verts.push_back(Eigen::Vector3d(sourcepos[0] + width * perp[0], sourcepos[1] + width * perp[1], -eps));
-			verts.push_back(Eigen::Vector3d(sourcepos[0] - width * perp[0], sourcepos[1] - width * perp[1], -eps));
-			verts.push_back(Eigen::Vector3d(destpos[0] + width * perp[0], destpos[1] + width * perp[1], -eps));
-			verts.push_back(Eigen::Vector3d(destpos[0] - width * perp[0], destpos[1] - width * perp[1], -eps));
+		verts.push_back(Eigen::Vector3d(sourcepos[0] + width * perp[0], sourcepos[1] + width * perp[1], -eps));
+		verts.push_back(Eigen::Vector3d(sourcepos[0] - width * perp[0], sourcepos[1] - width * perp[1], -eps));
+		verts.push_back(Eigen::Vector3d(destpos[0] + width * perp[0], destpos[1] + width * perp[1], -eps));
+		verts.push_back(Eigen::Vector3d(destpos[0] - width * perp[0], destpos[1] - width * perp[1], -eps));
 
-			faces.push_back(Eigen::Vector3i(idx, idx + 1, idx + 2));
-			faces.push_back(Eigen::Vector3i(idx + 2, idx + 1, idx + 3));
-			idx += 4;
-		}
+		faces.push_back(Eigen::Vector3i(idx, idx + 1, idx + 2));
+		faces.push_back(Eigen::Vector3i(idx + 2, idx + 1, idx + 3));
+		idx += 4;
 	}
-	else
-	{
-		for (std::vector<Connector*>::iterator it = model_.fullConnectors_.begin(); it != model_.fullConnectors_.end(); ++it)
-		{
-			Eigen::Vector3d color;
-			if ((*it)->associatedBendingStencils.empty())
-				color << 0.0, 0.0, 1.0;
-			else
-				color << 0.75, 0.5, 0.75;
-			Vector2d sourcepos = model_.particles_[(*it)->p1].pos;
-			Vector2d destpos = model_.particles_[(*it)->p2].pos;
 
-			Vector2d vec = destpos - sourcepos;
-			Vector2d perp(-vec[1], vec[0]);
-			perp /= perp.norm();
-
-			double dist = (sourcepos - destpos).norm();
-
-			double width = baselinewidth / (1.0 + 20.0 * dist * dist);
-
-			for (int i = 0; i < 4; i++)
-				vertexColors.push_back(color);
-
-			verts.push_back(Eigen::Vector3d(sourcepos[0] + width * perp[0], sourcepos[1] + width * perp[1], -eps));
-			verts.push_back(Eigen::Vector3d(sourcepos[0] - width * perp[0], sourcepos[1] - width * perp[1], -eps));
-			verts.push_back(Eigen::Vector3d(destpos[0] + width * perp[0], destpos[1] + width * perp[1], -eps));
-			verts.push_back(Eigen::Vector3d(destpos[0] - width * perp[0], destpos[1] - width * perp[1], -eps));
-
-			faces.push_back(Eigen::Vector3i(idx, idx + 1, idx + 2));
-			faces.push_back(Eigen::Vector3i(idx + 2, idx + 1, idx + 3));
-			idx += 4;
-		}
-	}
-	
 
 	int nParticles = model_.particles_.size();
 
-	for(int i=0; i<nParticles; i++)
+	for (int i = 0; i < nParticles; i++)
 	{
-		double radius = baseradius*sqrt(model_.particles_[i].mass);
+		if (model_.particles_[i].fixed)
+			continue;
+		double radius = baseradius * sqrt(model_.particles_[i].mass) / params_.numSegs;
 
-		Eigen::Vector3d color(0,0,0);
+		Eigen::Vector3d color(0, 0, 0);
 
-		if(model_.particles_[i].fixed)
+		if (model_.particles_[i].fixed)
 		{
 			radius = baseradius;
 			color << 1.0, 0, 0;
@@ -287,8 +255,8 @@ void GooHook1dGui::updateRenderGeometry()
 		const double PI = 3.1415926535898;
 		for (int j = 0; j <= numcirclewedges; j++)
 		{
-			verts.push_back(Eigen::Vector3d(model_.particles_[i].pos[0] + radius * cos(2 * PI*j / numcirclewedges),
-				model_.particles_[i].pos[1] + radius * sin(2 * PI*j / numcirclewedges), 0));
+			verts.push_back(Eigen::Vector3d(model_.particles_[i].pos[0] + radius * cos(2 * PI * j / numcirclewedges),
+				model_.particles_[i].pos[1] + radius * sin(2 * PI * j / numcirclewedges), 0));
 		}
 
 		for (int j = 0; j <= numcirclewedges; j++)
@@ -300,7 +268,7 @@ void GooHook1dGui::updateRenderGeometry()
 	}
 
 
-	renderQ.resize(verts.size(),3);
+	renderQ.resize(verts.size(), 3);
 	renderC.resize(vertexColors.size(), 3);
 	for (int i = 0; i < verts.size(); i++)
 	{
@@ -359,59 +327,62 @@ void GooHook1dGui::getOutputFolderPath()
 
 	if (!std::filesystem::exists(outputFolderPath_))
 	{
-		std::filesystem::create_directories(outputFolderPath_);
+		std::cout << "create directory: " << outputFolderPath_ << std::endl;
+		if (!std::filesystem::create_directories(outputFolderPath_))
+		{
+			std::cout << "create folder failed." << outputFolderPath_ << std::endl;
+		}
 	}
+	std::cout << outputFolderPath_ << std::endl;
 }
 
 bool GooHook1dGui::computePeriod(Eigen::VectorXd q, std::vector<double>& periods)
 {
-	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
+
+	periods.resize(model_.fullConnectors_.size(), -1);
+	for (int i = 0; i < model_.fullConnectors_.size(); i++)
 	{
-		periods.resize(model_.connectors_.size(), -1);
-		for (int i = 0; i < model_.connectors_.size(); i++)
+		double curLen = model_.getCurrentConnectorLen(q, i);
+		double restLen = static_cast<Spring*>(model_.fullConnectors_[i])->restlen;
+		restLen = std::abs(restLen);
+
+		bool isPassRestPoint = false;
+		double zeroTime = time_;
+		if (lastLens_[i] > 0)
 		{
-			double curLen = model_.getCurrentConnectorLen(q, i);
-			double restLen = static_cast<Spring1d*>(model_.connectors_[i])->restDis;
-			restLen = std::abs(restLen);
-
-			bool isPassRestPoint = false;
-			double zeroTime = time_;
-			if (lastLens_[i] > 0)
+			if ((curLen - restLen) * (lastLens_[i] - restLen) <= 0)
 			{
-				if ((curLen - restLen) * (lastLens_[i] - restLen) <= 0)
-				{
-					isPassRestPoint = true;
+				isPassRestPoint = true;
 
-					double a1 = std::abs(curLen - restLen);
-					double a2 = std::abs(lastLens_[i] - restLen);
+				double a1 = std::abs(curLen - restLen);
+				double a2 = std::abs(lastLens_[i] - restLen);
 
-					zeroTime = a2 / (a1 + a2) * time_ + a1 / (a1 + a2) * (time_ - params_.timeStep);
+				zeroTime = a2 / (a1 + a2) * time_ + a1 / (a1 + a2) * (time_ - params_.timeStep);
 
-				}
-					
 			}
-			lastLens_[i] = curLen;
 
-			if (isPassRestPoint)
+		}
+		lastLens_[i] = curLen;
+
+		if (isPassRestPoint)
+		{
+			if (lastPassRestPointTime_[i] < 0)
 			{
-				if (lastPassRestPointTime_[i] < 0)
-				{
-					lastPassRestPointTime_[i] = zeroTime;
-					periods[i] = -1;
-				}
-				else
-				{
-					double period = 2 * (zeroTime - lastPassRestPointTime_[i]);
-					lastPassRestPointTime_[i] = zeroTime;
-					periods[i] = period;
-				}
+				lastPassRestPointTime_[i] = zeroTime;
+				periods[i] = -1;
 			}
 			else
-				periods[i] = -1;
+			{
+				double period = 2 * (zeroTime - lastPassRestPointTime_[i]);
+				lastPassRestPointTime_[i] = zeroTime;
+				periods[i] = period;
+			}
 		}
+		else
+			periods[i] = -1;
 	}
-	else
-		return false;
+	return true;
+
 }
 
 void GooHook1dGui::initSimulation()
@@ -424,9 +395,14 @@ void GooHook1dGui::initSimulation()
 
 	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
 	{
-		model_.addParticle(0, -0.3);
-		lastPassRestPointTime_.resize(1);
-		lastLens_.resize(1);
+		model_.addParticle(0, 0, true);
+		for (int i = 1; i <= params_.numSegs; i++)
+		{
+			model_.addParticle(0, -0.3 *  i / params_.numSegs, false, (0.3 + 1e-5) / params_.numSegs);
+		}
+
+		lastPassRestPointTime_.resize(model_.fullConnectors_.size());
+		lastLens_.resize(model_.fullConnectors_.size());
 
 		for (int i = 0; i < lastLens_.size(); i++)
 		{
@@ -438,8 +414,22 @@ void GooHook1dGui::initSimulation()
 		
 	else
 	{
-		model_.addParticle(0, 0.3);
 		model_.addParticle(0, 0);
+
+		for (int i = 1; i <= params_.numSegs; i++)
+		{
+			model_.addParticle(0, 0.3 * i / params_.numSegs, false, (0.3 + 1e-5) / params_.numSegs);
+		}
+
+		lastPassRestPointTime_.resize(model_.fullConnectors_.size());
+		lastLens_.resize(model_.fullConnectors_.size());
+
+		for (int i = 0; i < lastLens_.size(); i++)
+		{
+			lastLens_[i] = std::abs(model_.particles_[i].pos(1) - params_.ceil);
+			lastPassRestPointTime_[i] = -1;
+		}
+
 	}
 	double delay_10ms = std::min(10.0, params_.timeStep * 100.0);
 	GIFStep_ = static_cast<int>(std::ceil(3.0 / delay_10ms));
@@ -452,6 +442,7 @@ void GooHook1dGui::initSimulation()
 	totalIterNum_ = params_.totalNumIter;
 
 	saveperiodFile_ = false;
+	model_.updateProjM();
 }
 
 bool GooHook1dGui::simulateOneStep()

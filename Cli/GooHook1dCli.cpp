@@ -83,6 +83,54 @@ void GooHook1dCli::getOutputFolderPath()
 	}
 }
 
+bool GooHook1dCli::computePeriod(Eigen::VectorXd q, std::vector<double>& periods)
+{
+
+	periods.resize(model_.fullConnectors_.size(), -1);
+	for (int i = 0; i < model_.fullConnectors_.size(); i++)
+	{
+		double curLen = model_.getCurrentConnectorLen(q, i);
+		double restLen = static_cast<Spring*>(model_.fullConnectors_[i])->restlen;
+		restLen = std::abs(restLen);
+
+		bool isPassRestPoint = false;
+		double zeroTime = time_;
+		if (lastLens_[i] > 0)
+		{
+			if ((curLen - restLen) * (lastLens_[i] - restLen) <= 0)
+			{
+				isPassRestPoint = true;
+
+				double a1 = std::abs(curLen - restLen);
+				double a2 = std::abs(lastLens_[i] - restLen);
+
+				zeroTime = a2 / (a1 + a2) * time_ + a1 / (a1 + a2) * (time_ - params_.timeStep);
+
+			}
+
+		}
+		lastLens_[i] = curLen;
+
+		if (isPassRestPoint)
+		{
+			if (lastPassRestPointTime_[i] < 0)
+			{
+				lastPassRestPointTime_[i] = zeroTime;
+				periods[i] = -1;
+			}
+			else
+			{
+				double period = 2 * (zeroTime - lastPassRestPointTime_[i]);
+				lastPassRestPointTime_[i] = zeroTime;
+				periods[i] = period;
+			}
+		}
+		else
+			periods[i] = -1;
+	}
+	return true;
+}
+
 void GooHook1dCli::initSimulation(std::string outputFolder)
 {
 	time_ = 0;
@@ -93,8 +141,17 @@ void GooHook1dCli::initSimulation(std::string outputFolder)
 	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
 	{
 		model_.addParticle(0, -0.3);
+		lastPassRestPointTime_.resize(1);
+		lastLens_.resize(1);
+
+		for (int i = 0; i < lastLens_.size(); i++)
+		{
+			lastLens_[i] = std::abs(model_.particles_[i].pos(1) - params_.ceil);
+			lastPassRestPointTime_[i] = -1;
+		}
+
 	}
-		
+
 	else
 	{
 		model_.addParticle(0, 0.3);
@@ -105,6 +162,9 @@ void GooHook1dCli::initSimulation(std::string outputFolder)
 
 	totalTime_ = params_.totalTime;
 	totalIterNum_ = params_.totalNumIter;
+
+	saveperiodFile_ = false;
+	model_.updateProjM();
 }
 
 bool GooHook1dCli::simulateOneStep()
@@ -208,4 +268,30 @@ void GooHook1dCli::saveInfo()
 
 	sfs << time_ << " " << springPotential << " " << gravityPotential << " " << model_.params_.barrierStiffness * IPCbarier << " " << kineticEnergy << " " << springPotential + gravityPotential + model_.params_.barrierStiffness * IPCbarier + kineticEnergy  << " " << center << std::endl;
 	std::cout << time_ << ", spring: " << springPotential << ", gravity: " << gravityPotential << ", IPC barrier: " << model_.params_.barrierStiffness * IPCbarier << ", kinetic: " << kineticEnergy << ", total: " << springPotential + gravityPotential + model_.params_.barrierStiffness * IPCbarier + kineticEnergy << ", com: " << center << std::endl;
+
+	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
+	{
+		std::string periodFileName = outputFolderPath_ + std::string("simulation_period.txt");
+		std::ofstream pfs;
+
+		std::vector<double> periods;
+		computePeriod(pos, periods);
+		bool worth2Save = false;
+		for (int i = 0; i < periods.size(); i++)
+			if (periods[i] > 0)
+				worth2Save = true;
+
+		if (worth2Save)
+		{
+			if (saveperiodFile_)
+				pfs.open(periodFileName, std::ofstream::out | std::ofstream::app);
+			else
+				pfs.open(periodFileName, std::ofstream::out);
+			saveperiodFile_ = true;
+			pfs << time_ << " ";
+			for (int i = 0; i < periods.size(); i++)
+				pfs << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << periods[i] << " ";
+			pfs << "\n";
+		}
+	}
 }
