@@ -425,23 +425,46 @@ void GooHook1d::assembleMassVec()
 //////////////////////////////////////////////////////////////////////////////////////
 double GooHook1d::getMaxStepSize(Eigen::VectorXd q, Eigen::VectorXd dir)
 {
-	if (!params_.floorEnabled)
-		return 1.0;
-	else
+	double maxStep = 1.0;
+	for (std::vector<Connector*>::iterator it = fullConnectors_.begin(); it != fullConnectors_.end(); ++it)
+	{
+		double restlen = static_cast<Spring*>(*it)->restlen;
+		int a = (*it)->p1;
+		int b = (*it)->p2;
+
+		double va = indexMap_[a] != -1 ? q(indexMap_[a]) : particles_[a].pos(1);
+		double vb = indexMap_[b] != -1 ? q(indexMap_[b]) : particles_[b].pos(1);
+
+		double deltaa = indexMap_[a] != -1 ? dir(indexMap_[a]) : 0;
+		double deltab = indexMap_[b] != -1 ? dir(indexMap_[b]) : 0;
+		
+		double presentDis = vb - va;
+		double deltaDis = deltab - deltaa;
+
+		double step = -presentDis / deltaDis;
+		std::cout << step << std::endl;
+		if (step > 0)
+			maxStep = std::min(maxStep, 0.8 * step);
+	}
+
+
+	if (params_.floorEnabled)
 	{
 		int nParticles = q.size();
-		double maxStep = 1.0;
+		
 		for (int i = 0; i < nParticles; i++)
 		{
+			if (particles_[i].fixed)
+				continue;
 			double radius = 0.02 * std::sqrt(particles_[i].mass);
-			double upperStep = (0.5 - radius - q(i)) / dir(i) > 0 ? (0.5 - radius - q(i)) / dir(i) : 1.0;
-			double lowerStep = (-0.5 + radius - q(i)) / dir(i) > 0 ? (-0.5 + radius - q(i)) / dir(i) : 1.0;
+			double upperStep = (0.5 - radius - q(indexMap_[i])) / dir(indexMap_[i]) > 0 ? (0.5 - radius - q(indexMap_[i])) / dir(indexMap_[i]) : 1.0;
+			double lowerStep = (-0.5 + radius - q(indexMap_[i])) / dir(indexMap_[i]) > 0 ? (-0.5 + radius - q(indexMap_[i])) / dir(indexMap_[i]) : 1.0;
 			double qiStep = 0.8 * std::min(upperStep, lowerStep);
-			/*std::wcout << "particle: " << i << ", pos: " << q(i) << ", dir: " << dir(i) << ", lower step: " << lowerStep << ", upper step: " << upperStep << std::endl;*/
 			maxStep = std::min(maxStep, qiStep);
 		}
-		return maxStep;
+
 	}
+	return maxStep;
 }
 
 void GooHook1d::updateCloseParticles(Eigen::VectorXd q, double d_eps)

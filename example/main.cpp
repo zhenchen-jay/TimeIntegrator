@@ -8,26 +8,68 @@
 #include <igl/png/writePNG.h>
 
 #include "../Gui/GooHook1dGui.h"
+#include "../Gui/FiniteElementsGui.h"
 #include "../Cli/GooHook1dCli.h"
 
 std::shared_ptr<GooHook1dGui> hook = NULL;
+std::shared_ptr<FiniteElementsGui> FEM = NULL;
 std::shared_ptr<GooHook1dCli> hookCli = NULL;
+
+bool isHookModel = false;
 
 void toggleSimulation(igl::opengl::glfw::Viewer& viewer)
 {
-	if (!hook)
+	if (!hook && !FEM)
 		return;
-	hook->isPaused_ = !(hook->isPaused_);
+	if (isHookModel)
+	{
+		if (!hook)
+		{
+			std::cerr << "error, hook pointer uninitialized" << std::endl;
+			exit(1);
+		}
+		else
+			hook->isPaused_ = !(hook->isPaused_);
+	}
+	else if (!FEM)
+	{
+		std::cerr << "error, FEM pointer uninitialized" << std::endl;
+		exit(1);
+	}
+	else
+	{
+		FEM->isPaused_ = !(FEM->isPaused_);
+	}
 
 }
 
 void resetSimulation(igl::opengl::glfw::Viewer& viewer)
 {
-	if (!hook)
+	if (!hook && !FEM)
 		return;
-//    static_cast<GooHook *> (hook)->reset();
-	hook->reset();
-	hook->renderRenderGeometry(viewer);
+	if (isHookModel)
+	{
+		if (!hook)
+		{
+			std::cerr << "error, hook pointer uninitialized" << std::endl;
+			exit(1);
+		}
+		else
+		{
+			hook->reset();
+			hook->renderRenderGeometry(viewer);
+		}
+	}
+	else if (!FEM)
+	{
+		std::cerr << "error, FEM pointer uninitialized" << std::endl;
+		exit(1);
+	}
+	else
+	{
+		FEM->reset();
+		FEM->renderRenderGeometry(viewer);
+	}
 }
 
 void saveScreenshot(igl::opengl::glfw::Viewer& viewer, const std::string& filePath, double scale = 1.0)   // super slow
@@ -52,18 +94,47 @@ void saveScreenshot(igl::opengl::glfw::Viewer& viewer, const std::string& filePa
 
 bool drawCallback(igl::opengl::glfw::Viewer &viewer)
 {
-	if (!hook)
+	if (!hook && !FEM)
 		return false;
 
-	if (!hook->reachTheTermination() && !(hook->isPaused_))
+	if (isHookModel)
 	{
-		hook->printTime();
-		hook->saveInfo();
-		hook->simulateOneStep();
-		hook->updateRenderGeometry();
-		hook->renderRenderGeometry(viewer); 
-//      saveScreenshot(viewer, hook->outputFolderPath_, 1.0); // super slow (be careful)
+		if (!hook)
+		{
+			std::cerr << "error, hook pointer uninitialized" << std::endl;
+			exit(1);
+		}
+		else
+		{
+			if (!hook->reachTheTermination() && !(hook->isPaused_))
+			{
+				hook->printTime();
+				hook->saveInfo();
+				hook->simulateOneStep();
+				hook->updateRenderGeometry();
+				hook->renderRenderGeometry(viewer);
+				//      saveScreenshot(viewer, hook->outputFolderPath_, 1.0); // super slow (be careful)
+			}
+		}
+		
 	}
+	else if (!FEM)
+	{
+		std::cerr << "error, FEM pointer uninitialized" << std::endl;
+		exit(1);
+	}
+	else
+	{
+		if (!FEM->reachTheTermination() && !(FEM->isPaused_))
+		{
+			FEM->printTime();
+			FEM->saveInfo();
+			FEM->simulateOneStep();
+			FEM->updateRenderGeometry();
+			FEM->renderRenderGeometry(viewer);
+		}
+	}
+	
 	return false;
 }
 
@@ -164,9 +235,19 @@ int main(int argc, char* argv[])
 	else
 	{
 		igl::opengl::glfw::Viewer viewer;
-		hook = std::make_shared<GooHook1dGui>();
-		hook->reset();
-		hook->renderRenderGeometry(viewer);
+		if (isHookModel)
+		{
+			hook = std::make_shared<GooHook1dGui>();
+			hook->reset();
+			hook->renderRenderGeometry(viewer);
+		}
+		else
+		{
+			FEM = std::make_shared<FiniteElementsGui>();
+			FEM->reset();
+			FEM->renderRenderGeometry(viewer);
+		}
+		
 		viewer.core().background_color << 1.0f, 1.0f, 1.0f, 1.0f;
 		viewer.core().orthographic = true;
 		viewer.core().camera_zoom = 2.10;

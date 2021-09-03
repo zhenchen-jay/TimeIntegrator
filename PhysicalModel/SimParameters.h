@@ -21,6 +21,12 @@ struct SimParameters
         floorEnabled = true;
 		frictionEnabled = false;
 
+        youngs = 1e5;
+        poisson = 0.3;
+        elasticEnabled = false;
+        internalContactEnabled = false;
+        
+
         particleMass = 1.0;
         maxSpringDist = 1.0;
 
@@ -75,6 +81,12 @@ struct SimParameters
     int totalNumIter;   // total simulation steps
 
     int numSegs;    // number of segments
+
+    double youngs;
+    double poisson;
+
+    bool elasticEnabled;
+    bool internalContactEnabled;
 };
 
 #endif
