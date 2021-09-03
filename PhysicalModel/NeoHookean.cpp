@@ -62,7 +62,7 @@ void NeoHookean::computeElasticGradientPerface(Eigen::VectorXd q, int faceId, Ei
 		else
 		{
 			dr = q(reducedV1) - restPos_(v0);
-			gradDr << 1, 0;
+			gradDr << 0, 1;
 		}
 	}
 	else
@@ -70,13 +70,13 @@ void NeoHookean::computeElasticGradientPerface(Eigen::VectorXd q, int faceId, Ei
 		if (reducedV1 == -1)
 		{
 			dr = restPos_(v1); -q(reducedV0);
-			gradDr << 0, -1;
+			gradDr << -1, 0;
 		}
 
 		else
 		{
 			dr = q(reducedV1) - q(reducedV0);
-			gradDr << 1, -1;
+			gradDr << -1, 1;
 		}
 
 	}
@@ -84,7 +84,7 @@ void NeoHookean::computeElasticGradientPerface(Eigen::VectorXd q, int faceId, Ei
 	double s = dr * dr / (drRest * drRest);
 	double lnJ = std::log(s) / 2;
 
-	Eigen::Vector2d grads = gradDr * dr / (drRest * drRest);
+	Eigen::Vector2d grads = 2 * gradDr * dr / (drRest * drRest);
 	Eigen::Vector2d gradlnJ = grads / (2 * s);
 
 	grad = 0.25 * (mu_ * (grads - 2 * gradlnJ) + 2 * lambda_ * lnJ * gradlnJ) * std::abs(drRest);
@@ -108,27 +108,36 @@ void NeoHookean::computeElasticHessianPerface(Eigen::VectorXd q, int faceId, Eig
 
 	if (reducedV0 == -1)
 	{
-		if (reducedV1 == -1)
-			return;
-		else
-			gradDr << 1, 0;
+	    if (reducedV1 == -1)
+	        return;
+	    else
+	    {
+	        dr = q(reducedV1) - restPos_(v0);
+	        gradDr << 0, 1;
+	    }
 	}
 	else
 	{
-		if (reducedV1 == -1)
-			gradDr << 0, -1;
+	    if (reducedV1 == -1)
+	    {
+	        dr = restPos_(v1); -q(reducedV0);
+	        gradDr << -1, 0;
+	    }
 
-		else
-			gradDr << 1, -1;
+	    else
+	    {
+	        dr = q(reducedV1) - q(reducedV0);
+	        gradDr << -1, 1;
+	    }
 
 	}
 	double s = dr * dr / (drRest * drRest);
 	double lnJ = std::log(s) / 2;
 
-	Eigen::Vector2d grads = gradDr * dr / (drRest * drRest);
+	Eigen::Vector2d grads = 2 * gradDr * dr / (drRest * drRest);
 	Eigen::Vector2d gradlnJ = grads / (2 * s);
 
-	Eigen::Matrix2d hesss = gradDr * gradDr.transpose() / (drRest * drRest);
+	Eigen::Matrix2d hesss = 2 * gradDr * gradDr.transpose() / (drRest * drRest);
 	Eigen::Matrix2d hesslnJ = hesss / (2 * s) - grads * grads.transpose() / (2 * s * s);
 
 	hess = 0.25 * (mu_ * (hesss - 2 * hesslnJ) + 2 * lambda_ * (lnJ * hesslnJ + gradlnJ * gradlnJ.transpose())) * std::abs(drRest);

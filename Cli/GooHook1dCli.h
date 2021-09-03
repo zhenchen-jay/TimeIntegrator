@@ -39,7 +39,7 @@ public:
 	}
 
 	void saveInfo();
-	bool GooHook1dCli::computePeriod(Eigen::VectorXd q, std::vector<double>& periods);
+	bool computePeriod(Eigen::VectorXd q, std::vector<double>& periods);
 
 private:
 	std::vector<double> lastLens_;

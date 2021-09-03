@@ -1,6 +1,8 @@
 #ifndef SIMPARAMETERS_H
 #define SIMPARAMETERS_H
 
+#include <cmath>
+
 struct SimParameters
 {
     SimParameters()
@@ -23,7 +25,7 @@ struct SimParameters
 
         youngs = 1e5;
         poisson = 0.3;
-        elasticEnabled = false;
+        elasticEnabled = true;
         internalContactEnabled = false;
         
 
@@ -31,11 +33,12 @@ struct SimParameters
         maxSpringDist = 1.0;
 
         ceil = 0;
-        TRBDF2_gamma = 1 - sqrt(2) / 2;
+        TRBDF2_gamma = 1 - std::sqrt(2) / 2;
         NM_gamma = 0.5;
         NM_beta = 0.25;
 
         modelType = MT_HARMONIC_1D;
+        materialType = MT_LINEAR;
         barrierStiffness = 1e10;
         barrierEps = 1e-2;
 
@@ -47,6 +50,7 @@ struct SimParameters
 
     enum TimeIntegrator {TI_EXPLICIT_EULER, TI_VELOCITY_VERLET, TI_RUNGE_KUTTA, TI_EXP_ROSENBROCK_EULER, TI_IMPLICIT_EULER, TI_IMPLICIT_MIDPOINT, TI_TRAPEZOID, TI_TR_BDF2, TI_BDF2, TI_NEWMARK};
     enum ModelType {MT_HARMONIC_1D, MT_POGO_STICK};
+    enum MaterialType {MT_LINEAR, MT_NEOHOOKEAN};
 
     double timeStep;
     TimeIntegrator integrator;
@@ -75,7 +79,8 @@ struct SimParameters
     double barrierStiffness;
     double barrierEps;
 
-    ModelType modelType; 
+    ModelType modelType;
+    MaterialType materialType;
 
     double totalTime;   // total simulation time
     int totalNumIter;   // total simulation steps

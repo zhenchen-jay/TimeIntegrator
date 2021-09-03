@@ -240,20 +240,24 @@ int main(int argc, char* argv[])
 			hook = std::make_shared<GooHook1dGui>();
 			hook->reset();
 			hook->renderRenderGeometry(viewer);
+			viewer.data().set_face_based(false);
+			viewer.core().camera_zoom = 2.10;
+
 		}
 		else
 		{
 			FEM = std::make_shared<FiniteElementsGui>();
 			FEM->reset();
 			FEM->renderRenderGeometry(viewer);
+			viewer.data().set_face_based(false);
+			viewer.core().camera_zoom = 0.5;
 		}
-		
+		viewer.data().show_lines = false;
 		viewer.core().background_color << 1.0f, 1.0f, 1.0f, 1.0f;
 		viewer.core().orthographic = true;
-		viewer.core().camera_zoom = 2.10;
 		viewer.core().animation_max_fps = 60.0;
-		viewer.data().show_lines = false;
-		viewer.data().set_face_based(false);
+
+
 		viewer.core().is_animating = true;
 		viewer.callback_key_pressed = keyCallback;
 		viewer.callback_pre_draw = drawCallback;
@@ -275,7 +279,10 @@ int main(int argc, char* argv[])
 				}
 
 			}
-			hook->drawGUI(menu);
+			if(isHookModel)
+			    hook->drawGUI(menu);
+			else
+			    FEM->drawGUI(menu);
 			return false;
 		};
 		/*menu.callback_draw_custom_window = [&]()

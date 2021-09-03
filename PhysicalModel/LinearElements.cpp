@@ -7,7 +7,7 @@
 double LinearElements::computeElasticPotentialPerface(Eigen::VectorXd q, int faceId)
 {
 	double energy = 0;
-
+//    std::cout << restF_ << std::endl;
 	int v0 = restF_(faceId, 0);
 	int v1 = restF_(faceId, 1);
 
@@ -62,7 +62,7 @@ void LinearElements::computeElasticGradientPerface(Eigen::VectorXd q, int faceId
 		else
 		{
 			dr = q(reducedV1) - restPos_(v0);
-			gradDr << 1, 0;
+			gradDr << 0, 1;
 		}
 	}
 	else
@@ -70,21 +70,22 @@ void LinearElements::computeElasticGradientPerface(Eigen::VectorXd q, int faceId
 		if (reducedV1 == -1)
 		{
 			dr = restPos_(v1); - q(reducedV0);
-			gradDr << 0, -1;
+			gradDr << -1, 0;
 		}
-		
+
 		else
 		{
 			dr = q(reducedV1) - q(reducedV0);
-			gradDr << 1, -1;
+			gradDr << -1, 1;
 		}
-		
+
 	}
 
 	// for linear elements: strain = 1/2 (d u + d u^T), where assuming that r = r_rest + u
 	double strain = (dr - drRest) / drRest;
+	Eigen::Vector2d gradStrain = gradDr / drRest;
 
-	grad = (mu_ + lambda_ / 2) * strain * gradDr / drRest * std::abs(drRest);
+	grad = (mu_ + lambda_ / 2) * strain * gradStrain * std::abs(drRest);
 }
 
 void LinearElements::computeElasticHessianPerface(Eigen::VectorXd q, int faceId, Eigen::Matrix2d& hess)
@@ -108,17 +109,17 @@ void LinearElements::computeElasticHessianPerface(Eigen::VectorXd q, int faceId,
 		if (reducedV1 == -1)
 			return;
 		else
-			gradDr << 1, 0;
+			gradDr << 0, 1;
 	}
 	else
 	{
 		if (reducedV1 == -1)
-			gradDr << 0, -1;
+			gradDr << -1, 0;
 
 		else
-			gradDr << 1, -1;
+			gradDr << -1, 1;
 
 	}
-
-	hess = (mu_ + lambda_ / 2) * gradDr * gradDr.transpose() / (drRest * drRest) * std::abs(drRest);
+	Eigen::Vector2d gradStrain = gradDr / drRest;
+	hess = (mu_ + lambda_ / 2) * gradStrain * gradStrain.transpose() * std::abs(drRest);
 }

@@ -7,13 +7,14 @@
 void PhysicalModel::initialize(Eigen::VectorXd restPos, Eigen::MatrixXi restF, Eigen::VectorXd massVec, std::map<int, double>* clampedPoints)
 {
 	restPos_ = restPos;
+	curPos_ = restPos;
 	restF_ = restF;
 	massVec_ = massVec;
-	updateProjM(*clampedPoints);
+	updateProjM(clampedPoints);
 	assembleMass(massVec);
 }
 
-void PhysicalModel::updateProjM(std::map<int, double> clampedPoints)
+void PhysicalModel::updateProjM(std::map<int, double> *clampedPoints)
 {
 	int row = 0;
 	int nverts = restPos_.size();
@@ -23,8 +24,12 @@ void PhysicalModel::updateProjM(std::map<int, double> clampedPoints)
 
 	for (int i = 0; i < nverts; i++)
 	{
-		if (clampedPoints.find(i) != clampedPoints.end())
-			continue;
+	    if(clampedPoints)
+	    {
+	        if (clampedPoints->find(i) != clampedPoints->end())
+	            continue;
+	    }
+
 
 		T.push_back(Eigen::Triplet<double>(row, i, 1.0));
 		indexMap_[i] = row;
@@ -52,6 +57,30 @@ void PhysicalModel::assembleMass(Eigen::VectorXd massVec)
 			continue;
 		massVec_(indexMap_[i]) = massVec(i);
 	}
+}
+
+void PhysicalModel::convertVar2Pos(Eigen::VectorXd q, Eigen::VectorXd &pos)
+{
+    int nVals = q.size();
+    int nverts = restPos_.rows();
+    pos.setZero(nverts);
+
+    for(int i = 0; i < nVals; i++)
+        pos(indexInvMap_[i]) = q(i);
+}
+
+void PhysicalModel::convertPos2Var(Eigen::VectorXd pos, Eigen::VectorXd &q)
+{
+    int nverts = curPos_.rows();
+    int nVals = indexInvMap_.size();
+
+    q.setZero(nVals);
+
+    for(int i = 0; i < nverts; i++)
+    {
+        if(indexMap_[i] != -1)
+            q(indexMap_[i]) = pos(i);
+    }
 }
 
 double PhysicalModel::computeEnergy(Eigen::VectorXd q)
@@ -152,6 +181,7 @@ void PhysicalModel::computeElasticGradient(Eigen::VectorXd q, Eigen::VectorXd& g
 {
 	int nReducedVerts = q.size();
 	int nfaces = restF_.rows();
+	grad.setZero(nReducedVerts);
 
 	for (int i = 0; i < nfaces; i++)
 	{
@@ -610,4 +640,71 @@ void PhysicalModel::testGradientDifferential(Eigen::VectorXd q)
 		std::cout << "The difference between above two is: " << ((epsF - g) / eps - H * direction).norm() << std::endl << std::endl;
 
 	}
+}
+
+void PhysicalModel::testPotentialDifferentialPerface(Eigen::VectorXd q, int faceId)
+{
+    Eigen::Vector2d direction = Eigen::Vector2d::Random();
+
+    int v0 = restF_(faceId, 0);
+    int v1 = restF_(faceId, 1);
+
+    int reducedV0 = indexMap_[v0];
+    int reducedV1 = indexMap_[v1];
+
+    double V = computeElasticPotentialPerface(q, faceId);
+    Eigen::Vector2d g;
+    computeElasticGradientPerface(q, faceId, g);
+
+    for (int k = 4; k <= 12; k++)
+    {
+        double eps = pow(10, -k);
+        Eigen::VectorXd epsQ = q;
+        if(reducedV0 != -1)
+            epsQ(reducedV0) = q(reducedV0) + eps * direction(0);
+        if(reducedV1 != -1)
+            epsQ(reducedV1) = q(reducedV1) + eps * direction(1);
+
+        double  epsV = computeElasticPotentialPerface(epsQ, faceId);
+        std::cout << "Epsilon = " << eps << std::endl;
+        std::cout << "Finite difference: " << (epsV - V) / eps << std::endl;
+        std::cout << "directional derivative: " << g.dot(direction) << std::endl;
+        std::cout << "The difference between above two is: " << abs((epsV - V) / eps - g.dot(direction)) << std::endl << std::endl;
+    }
+}
+
+void PhysicalModel::testGradientDifferentialPerface(Eigen::VectorXd q, int faceId)
+{
+    Eigen::Vector2d direction = Eigen::Vector2d::Random();
+    direction.normalize();
+    Eigen::Vector2d g;
+    computeElasticGradientPerface(q, faceId, g);
+
+    Eigen::Matrix2d H;
+    int v0 = restF_(faceId, 0);
+    int v1 = restF_(faceId, 1);
+
+    int reducedV0 = indexMap_[v0];
+    int reducedV1 = indexMap_[v1];
+
+    computeElasticHessianPerface(q, faceId, H);
+
+    for (int k = 1; k <= 12; k++)
+    {
+        double eps = pow(10, -k);
+        Eigen::VectorXd epsQ = q;
+        if(reducedV0 != -1)
+            epsQ(reducedV0) = q(reducedV0) + eps * direction(0);
+        if(reducedV1 != -1)
+            epsQ(reducedV1) = q(reducedV1) + eps * direction(1);
+
+        Eigen::Vector2d epsF;
+        computeElasticGradientPerface(epsQ, faceId, epsF);
+
+        std::cout << "EPS is: " << eps << std::endl;
+        std::cout << "Norm of Finite Difference is: " << (epsF - g).norm() / eps << std::endl;
+        std::cout << "Norm of Directinal Gradient is: " << (H * direction).norm() << std::endl;
+        std::cout << "The difference between above two is: " << ((epsF - g) / eps - H * direction).norm() << std::endl << std::endl;
+
+    }
 }

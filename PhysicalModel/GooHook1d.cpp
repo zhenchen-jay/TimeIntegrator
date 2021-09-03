@@ -41,7 +41,7 @@ void GooHook1d::addParticle(double x, double y, bool isFixed, double maxEffectDi
 					if (dist < maxEffectDist)
 					{
 						if (params_.modelType == SimParameters::MT_HARMONIC_1D)
-							dist *= 0.5;
+							dist *= 0.8;
 						auto spring = new Spring(newid, i, 0, params_.springStiffness, dist, true);
 						fullConnectors_.push_back(spring);
 					}

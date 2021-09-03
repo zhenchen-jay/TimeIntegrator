@@ -45,6 +45,9 @@ public:
 	{
 		viewer.data().clear();
 		viewer.data().set_mesh(renderQ, renderF);
+		viewer.data().set_colors(renderC);
+		Eigen::RowVector3d edgeColor(0, 0, 0);
+		viewer.data().add_edges(edgeStart, edgeEnd, edgeColor);
 	}
 
 	void updateParams()
@@ -78,11 +81,16 @@ private:
 	Eigen::VectorXd preQ_;
 	Eigen::VectorXd preVel_;
 
+	Eigen::VectorXd curPos_;
 	Eigen::MatrixXi curF_;
 
 	Eigen::MatrixXd renderQ;
 	Eigen::MatrixXi renderF;
 	Eigen::MatrixXd renderC;
+
+	Eigen::MatrixXd edgeStart;
+	Eigen::MatrixXd edgeEnd;
+
 
 	std::shared_ptr<PhysicalModel> model_;
 	double GIFScale_;
