@@ -21,16 +21,16 @@ void OptSolver::newtonSolver(std::function<double(Eigen::VectorXd, Eigen::Vector
 		Eigen::SparseMatrix<double> H = hessian;
 		Eigen::SparseMatrix<double> I(DIM, DIM);
 		I.setIdentity();
-		hessian = H + reg * I;
+		hessian = H;
 
 		Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > solver(hessian);
 
 		while (solver.info() != Eigen::Success)
 		{
-			reg = std::max(2 * reg, 1e-16);
 			std::cout << "Matrix is not positive definite, current reg = " << reg << std::endl;
 			hessian = H + reg * I;
 			solver.compute(hessian);
+			reg = std::max(2 * reg, 1e-16);
 		}
 
 		neggrad = -grad;

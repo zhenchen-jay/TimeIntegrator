@@ -140,16 +140,18 @@ void FiniteElementsGui::updateRenderGeometry()
 		verts.push_back(Eigen::Vector3d(-0.01, curPos_(i), 0));
 		verts.push_back(Eigen::Vector3d(0.01, curPos_(i), 0));
 
-		Eigen::Vector3d color;
-		color << 255, 0, 255;
+		Eigen::RowVector3d color;
 
+		igl::colormap(igl::COLOR_MAP_TYPE_VIRIDIS, 2.0 / 9.0, color.data());
+
+		//color << 255, 175, 255;
 		vertsColors.push_back(color);
 		vertsColors.push_back(color);
 
 		if (i != curPos_.size() - 1)
 		{
-			faces.push_back(Eigen::Vector3i(idx, idx + 1, idx + 3));
-			faces.push_back(Eigen::Vector3i(idx, idx + 3, idx + 2));
+			faces.push_back(Eigen::Vector3i(idx + 1, idx, idx + 3));
+			faces.push_back(Eigen::Vector3i(idx + 3, idx, idx + 2));
 		}
 		idx += 2;
 	}
@@ -169,13 +171,23 @@ void FiniteElementsGui::updateRenderGeometry()
 	    renderC.row(i) = vertsColors[i];
 	}
 
-	edgeStart.setZero(curPos_.size(), 3);
+	edgeStart.setZero(curPos_.size() * 3 - 2, 3);
 	edgeEnd = edgeStart;
 
 	for(int i = 0; i < curPos_.size(); i++)
 	{
 	    edgeStart.row(i) = Eigen::Vector3d(-0.01, curPos_(i), 0);
 	    edgeEnd.row(i) = Eigen::Vector3d(0.01, curPos_(i), 0);
+
+		if (i < curPos_.size() - 1)
+		{
+			edgeStart.row(2 * i + curPos_.size()) = Eigen::Vector3d(-0.01, curPos_(i), 0);
+			edgeEnd.row(2 * i + curPos_.size()) = Eigen::Vector3d(-0.01, curPos_(i + 1), 0);
+
+			edgeStart.row(2 * i + curPos_.size() + 1) = Eigen::Vector3d(0.01, curPos_(i), 0);
+			edgeEnd.row(2 * i + curPos_.size() + 1) = Eigen::Vector3d(0.01, curPos_(i + 1), 0);
+		}
+		
 	}
 }
 

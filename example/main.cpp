@@ -1,4 +1,3 @@
-
 #include <igl/opengl/glfw/Viewer.h>
 #include <thread>
 #include <igl/unproject.h>
@@ -285,25 +284,6 @@ int main(int argc, char* argv[])
 			    FEM->drawGUI(menu);
 			return false;
 		};
-		/*menu.callback_draw_custom_window = [&]()
-		{
-			ImGui::SetNextWindowPos(ImVec2(180.f * menu.menu_scaling(), 10), ImGuiCond_FirstUseEver);
-			ImGui::SetNextWindowSize(ImVec2(0.0, 0.0), ImGuiCond_FirstUseEver);
-			if (ImGui::CollapsingHeader("Simulation Control", ImGuiTreeNodeFlags_DefaultOpen))
-			{
-				if (ImGui::Button("Run Sim", ImVec2(-1, 0)))
-				{
-					toggleSimulation(viewer);
-				}
-				if (ImGui::Button("Reset Sim", ImVec2(-1, 0)))
-				{
-					resetSimulation(viewer);
-				}
-
-			}
-			hook->drawGUI(menu);
-			return false;
-		};*/
 
 		viewer.launch();
 	}
