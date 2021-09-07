@@ -73,8 +73,6 @@ public:
 	void saveInfo();
 
 private:
-	SimParameters params_;
-
 	Eigen::VectorXd curQ_;
 	Eigen::VectorXd curVel_;
 
@@ -111,6 +109,7 @@ public:
 	std::string outputFolderPath_, baseFolder_;
 	double time_;
 	int iterNum_;
+	SimParameters params_;
 };
 
 

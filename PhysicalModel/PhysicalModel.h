@@ -13,7 +13,8 @@ public:
 	{
 		params_ = simParams;
 		mu_ = params_.youngs / (2 * (1 + params_.poisson));
-		lambda_ = params_.youngs * params_.poisson / (1 + params_.poisson);   // for 3d lambda = Y * nu / (1 + nv) / (1 - 2 nv), for 2d  lambda = Y * nu / (1 + nv) / (1 - nv), and for 1d lambda = Y * nu / (1 + nv)
+		lambda_ = params_.youngs * params_.poisson / (1 + params_.poisson);
+		// for 3d lambda = Y * nu / (1 + nv) / (1 - 2 nv), for 2d  lambda = Y * nu / (1 + nv) / (1 - nv), and for 1d lambda = Y * nu / (1 + nv). In one dimensional case, the stiffness is 2 * mu + lambda = Y
 	}
 	virtual ~PhysicalModel() = default;
 
@@ -64,6 +65,12 @@ public:
 	void testPotentialDifferential(Eigen::VectorXd q);
 	void testGradientDifferential(Eigen::VectorXd q);
 
+	void testFloorBarrierEnergy(Eigen::VectorXd q);
+	void testFloorBarrierGradient(Eigen::VectorXd q);
+
+	void testInternalBarrierEnergy(Eigen::VectorXd q);
+    void testInternalBarrierGradient(Eigen::VectorXd q);
+
 	void testPotentialDifferentialPerface(Eigen::VectorXd q, int faceId);
 	void testGradientDifferentialPerface(Eigen::VectorXd q, int faceId);
 
@@ -80,4 +87,6 @@ public:
 	Eigen::VectorXd massVec_;
 	double mu_;
 	double lambda_;
+
+	std::map<int, double> clampedPos_;
 };

@@ -7,14 +7,13 @@ struct SimParameters
 {
     SimParameters()
     {
-        timeStep = 5e-4;
+        timeStep = 5e-3;
         integrator = TI_NEWMARK;
         NewtonMaxIters = 20;
         NewtonTolerance = 1e-8;
 
-        gravityEnabled = false;
-        //gravityG = -9.8;
-        gravityG = 0;
+        gravityEnabled = true;
+        gravityG = -10;
         springsEnabled = true;
         springStiffness = 1e3;
         maxSpringStrain = 0.2;
@@ -23,7 +22,7 @@ struct SimParameters
         floorEnabled = true;
 		frictionEnabled = false;
 
-        youngs = 1e5;
+        youngs = 9e2;
         poisson = 0.3;
         elasticEnabled = true;
         internalContactEnabled = false;
@@ -37,15 +36,19 @@ struct SimParameters
         NM_gamma = 0.5;
         NM_beta = 0.25;
 
-        modelType = MT_HARMONIC_1D;
+        modelType = MT_POGO_STICK;
         materialType = MT_LINEAR;
-        barrierStiffness = 1e10;
-        barrierEps = 1e-2;
+        barrierStiffness = 1;
+        barrierEps = 0.01;
 
         totalTime = 20;
         totalNumIter = totalTime / timeStep;
 
-        numSegs = 2;
+        numSegs = 100;
+        topLine = 20;
+        barLen = 10;
+        barHeight = 5;
+
     }
 
     enum TimeIntegrator {TI_EXPLICIT_EULER, TI_VELOCITY_VERLET, TI_RUNGE_KUTTA, TI_EXP_ROSENBROCK_EULER, TI_IMPLICIT_EULER, TI_IMPLICIT_MIDPOINT, TI_TRAPEZOID, TI_TR_BDF2, TI_BDF2, TI_NEWMARK};
@@ -92,6 +95,10 @@ struct SimParameters
 
     bool elasticEnabled;
     bool internalContactEnabled;
+
+    double topLine;
+    double barLen;
+    double barHeight;
 };
 
 #endif

@@ -249,7 +249,7 @@ int main(int argc, char* argv[])
 			FEM->reset();
 			FEM->renderRenderGeometry(viewer);
 			viewer.data().set_face_based(false);
-			viewer.core().camera_zoom = 0.5;
+			viewer.core().camera_zoom = 2.10;
 		}
 		viewer.data().show_lines = false;
 		viewer.core().background_color << 1.0f, 1.0f, 1.0f, 1.0f;

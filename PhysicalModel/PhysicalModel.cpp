@@ -18,6 +18,9 @@ void PhysicalModel::updateProjM(std::map<int, double> *clampedPoints)
 {
 	int row = 0;
 	int nverts = restPos_.size();
+	clampedPos_.clear();
+	if(clampedPoints)
+	    clampedPos_ = *clampedPoints;
 
 	std::vector<Eigen::Triplet<double>> T;
 	indexMap_.resize(nverts, -1);
@@ -67,6 +70,9 @@ void PhysicalModel::convertVar2Pos(Eigen::VectorXd q, Eigen::VectorXd &pos)
 
     for(int i = 0; i < nVals; i++)
         pos(indexInvMap_[i]) = q(i);
+
+    for(auto &it : clampedPos_)
+        pos(it.first) = it.second;
 }
 
 void PhysicalModel::convertPos2Var(Eigen::VectorXd pos, Eigen::VectorXd &q)
@@ -109,21 +115,18 @@ void PhysicalModel::computeGradient(Eigen::VectorXd q, Eigen::VectorXd& grad)
 		computeGravityGradient(q, gravityGrad);
 		grad += gravityGrad;
 	}
-
 	if (params_.elasticEnabled)
 	{
 		Eigen::VectorXd springGrad;
 		computeElasticGradient(q, springGrad);
 		grad += springGrad;
 	}
-
 	if (params_.floorEnabled)
 	{
 		Eigen::VectorXd floorGrad;
 		computeFloorGradeint(q, floorGrad);
 		grad += params_.barrierStiffness * floorGrad;
 	}
-
 	if (params_.internalContactEnabled)
 	{
 		Eigen::VectorXd internalContactGrad;
@@ -157,7 +160,6 @@ void PhysicalModel::computeHessian(Eigen::VectorXd q, Eigen::SparseMatrix<double
 			hessianT.push_back(Eigen::Triplet<double>(internlT[i].row(), internlT[i].col(), params_.barrierStiffness * internlT[i].value()));
 		}
 	}
-
 	hessian.resize(q.size(), q.size());
 	hessian.setFromTriplets(hessianT.begin(), hessianT.end());
 }
@@ -168,7 +170,6 @@ double PhysicalModel::computeElasticPotential(Eigen::VectorXd q)
 {
 	double energy = 0;
 	int nfaces = restF_.rows();
-
 	for (int i = 0; i < nfaces; i++)
 	{
 		energy += computeElasticPotentialPerface(q, i);
@@ -267,14 +268,16 @@ double PhysicalModel::computeFloorBarrier(Eigen::VectorXd q)
 	{
 		if (indexMap_[i] == -1)
 			continue;
-		if (q(indexMap_[i]) <= -0.5 + params_.barrierEps || q(indexMap_[i]) >= 0.5 - params_.barrierEps)
+		if (q(indexMap_[i]) <= params_.barrierEps || q(indexMap_[i]) >= params_.topLine - params_.barrierEps)
 		{
 			double pos = q(indexMap_[i]);
 			double dist = params_.barrierEps;
-			if (q(indexMap_[i]) <= -0.5 + params_.barrierEps)
-				dist = q(indexMap_[i]) + 0.5;
+			if (q(indexMap_[i]) <= params_.barrierEps)
+				dist = q(indexMap_[i]);
 			else
-				dist = 0.5 - q(indexMap_[i]);
+			    dist = params_.topLine - q(indexMap_[i]);
+			if(dist <= 1e-10)
+			    std::cout << "dist to the floor is too small: " << dist << std::endl;
 			barrier += -(dist - params_.barrierEps) * (dist - params_.barrierEps) * std::log(dist / params_.barrierEps);
 		}
 	}
@@ -290,15 +293,15 @@ void PhysicalModel::computeFloorGradeint(Eigen::VectorXd q, Eigen::VectorXd& gra
 		if (indexMap_[i] == -1)
 			continue;
 		int id = indexMap_[i];
-		if (q(id) <= -0.5 + params_.barrierEps || q(id) >= 0.5 - params_.barrierEps)
+		if (q(id) <= params_.barrierEps || q(id) >= params_.topLine - params_.barrierEps)
 		{
 			double dist = params_.barrierEps;
-			if (q(id) <= -0.5 + params_.barrierEps)
-				dist = q(id) + 0.5;
+			if (q(id) <= params_.barrierEps)
+				dist = q(id);
 			else
-				dist = 0.5 - q(id);
+			    dist = params_.topLine - q(id);
 			grad(id) += -(dist - params_.barrierEps) * (2 * std::log(dist / params_.barrierEps) - params_.barrierEps / dist + 1);
-			if (q(id) >= 0.5 - params_.barrierEps)
+			if (q(id) >= params_.topLine - params_.barrierEps)
 				grad(id) *= -1;
 		}
 	}
@@ -313,13 +316,13 @@ void PhysicalModel::computeFloorHessian(Eigen::VectorXd q, std::vector<Eigen::Tr
 		if (indexMap_[i] == -1)
 			continue;
 		int id = indexMap_[i];
-		if (q(id) <= -0.5 + params_.barrierEps || q(id) >= 0.5 - params_.barrierEps)
+		if (q(id) <= params_.barrierEps || q(id) >= params_.topLine - params_.barrierEps)
 		{
 			double dist = params_.barrierEps;
-			if (q(id) <= -0.5 + params_.barrierEps)
-				dist = q(id) + 0.5;
+			if (q(id) <= params_.barrierEps)
+				dist = q(id);
 			else
-				dist = 0.5 - q(id);
+			    dist = params_.topLine - q(id);
 			double value = -2 * std::log(dist / params_.barrierEps) + (params_.barrierEps - dist) * (params_.barrierEps + 3 * dist) / (dist * dist);
 			hessian.push_back(Eigen::Triplet<double>(id, id, value));
 		}
@@ -391,6 +394,8 @@ double PhysicalModel::computeInternalBarrier(Eigen::VectorXd q)
 		double dist = std::abs(dr);
 		if (dist < params_.barrierEps)
 		{
+		    if(dist <= 1e-10)
+		        std::cout << "dist of two points are too small: " << dist << std::endl;
 			energy += -(dist - params_.barrierEps) * (dist - params_.barrierEps) * std::log(dist / params_.barrierEps);
 		}
 	}
@@ -504,33 +509,21 @@ void PhysicalModel::computeInternalHessian(Eigen::VectorXd q, std::vector<Eigen:
 			{
 				if (reducedV1 == -1)
 					continue;
-				if (dr < 0)
-					hessian.push_back(Eigen::Triplet<double>(reducedV1, reducedV1, -tempValue));
-				else
-					hessian.push_back(Eigen::Triplet<double>(reducedV1, reducedV1, tempValue));
+				hessian.push_back(Eigen::Triplet<double>(reducedV1, reducedV1, tempValue));
 
 			}
 			else
 			{
 				if (reducedV1 == -1)
 				{
-					if (dr < 0)
-						hessian.push_back(Eigen::Triplet<double>(reducedV0, reducedV0, tempValue));
-					else
-						hessian.push_back(Eigen::Triplet<double>(reducedV0, reducedV0, -tempValue));
+					hessian.push_back(Eigen::Triplet<double>(reducedV0, reducedV0, tempValue));
 				}
 				else
 				{
-					if (dr < 0)
-					{
-						hessian.push_back(Eigen::Triplet<double>(reducedV0, reducedV0, tempValue));
-						hessian.push_back(Eigen::Triplet<double>(reducedV1, reducedV1, -tempValue));
-					}
-					else
-					{
-						hessian.push_back(Eigen::Triplet<double>(reducedV0, reducedV0, -tempValue));
-						hessian.push_back(Eigen::Triplet<double>(reducedV1, reducedV1, tempValue));
-					}
+				    hessian.push_back(Eigen::Triplet<double>(reducedV0, reducedV0, tempValue));
+				    hessian.push_back(Eigen::Triplet<double>(reducedV0, reducedV1, -tempValue));
+				    hessian.push_back(Eigen::Triplet<double>(reducedV1, reducedV0, -tempValue));
+				    hessian.push_back(Eigen::Triplet<double>(reducedV1, reducedV1, tempValue));
 				}
 			}
 		}
@@ -572,9 +565,12 @@ double PhysicalModel::getMaxStepSize(Eigen::VectorXd q, Eigen::VectorXd dir)
 			}
 		}
 
-		double step = -dr / deltaDr;
-		if (step > 0)
-			maxStep = std::min(maxStep, 0.8 * step);
+		if(dr * (dr + deltaDr) <= 0) // possible inverse
+		{
+		    double step = -dr / deltaDr;
+		    if (step > 0)
+		        maxStep = std::min(maxStep, 0.8 * step);
+		}
 	}
 
 	if (params_.floorEnabled)
@@ -585,13 +581,16 @@ double PhysicalModel::getMaxStepSize(Eigen::VectorXd q, Eigen::VectorXd dir)
 			if (id == -1)
 				continue;
 
-			double upperStep = (0.5 - q(id)) / dir(id) > 0 ? (0.5 - q(id)) / dir(id) : 1.0;
-			double lowerStep = (-0.5 - q(id)) / dir(id) > 0 ? (-0.5 - q(id)) / dir(id) : 1.0;
-			double qiStep = 0.8 * std::min(upperStep, lowerStep);
-			maxStep = std::min(maxStep, qiStep);
+			double upperStep = (params_.topLine - q(id)) / dir(id) > 0 ? (params_.topLine - q(id)) / dir(id) : 1.0;
+			double lowerStep = (-q(id)) / dir(id) > 0 ? (-q(id)) / dir(id) : 1.0;
+			if(upperStep > 0 || lowerStep > 0)
+			{
+			    double qiStep = 0.8 * std::min(upperStep, lowerStep);
+			    maxStep = std::min(maxStep, qiStep);
+			}
 		}
 	}
-
+//    std::cout << "max step size: " << maxStep << std::endl;
 	return maxStep;
 }
 
@@ -706,5 +705,123 @@ void PhysicalModel::testGradientDifferentialPerface(Eigen::VectorXd q, int faceI
         std::cout << "Norm of Directinal Gradient is: " << (H * direction).norm() << std::endl;
         std::cout << "The difference between above two is: " << ((epsF - g) / eps - H * direction).norm() << std::endl << std::endl;
 
+    }
+}
+
+void PhysicalModel::testFloorBarrierEnergy(Eigen::VectorXd q)
+{
+    Eigen::VectorXd testQ = q;
+
+    // first make sure that testQ fall into the validation domain of the IPC barrier
+    for(int i = 0; i < testQ.size(); i++)
+    {
+        testQ(i) = params_.barrierEps / testQ.size() * (i + 1);
+    }
+
+    Eigen::VectorXd grad;
+    double E = computeFloorBarrier(testQ);
+    computeFloorGradeint(testQ, grad);
+
+    Eigen::VectorXd  dir = Eigen::VectorXd::Random(grad.size());
+
+    for(int i = 3; i <= 9; i++)
+    {
+        double eps = std::pow(0.1, i);
+        Eigen::VectorXd newQ = testQ + eps * dir;
+
+        double E1 = computeFloorBarrier(newQ);
+        std::cout << "eps: " << eps << std::endl;
+        std::cout << "finite difference: " << (E1 - E) / eps << ", directional derivative: " << dir.dot(grad) << ", error: " << std::abs((E1 - E) / eps - dir.dot(grad)) << std::endl;
+    }
+}
+
+void PhysicalModel::testFloorBarrierGradient(Eigen::VectorXd q)
+{
+    Eigen::VectorXd testQ = q;
+
+    // first make sure that testQ fall into the validation domain of the IPC barrier
+    for(int i = 0; i < testQ.size(); i++)
+    {
+        testQ(i) = params_.barrierEps / testQ.size() * (i + 1);
+    }
+
+    Eigen::VectorXd grad;
+    Eigen::SparseMatrix<double> H;
+    std::vector<Eigen::Triplet<double>> T;
+
+    computeFloorGradeint(testQ, grad);
+    computeFloorHessian(testQ, T);
+    H.resize(q.size(), q.size());
+    H.setFromTriplets(T.begin(), T.end());
+
+    Eigen::VectorXd  dir = Eigen::VectorXd::Random(grad.size());
+
+    for(int i = 3; i <= 9; i++)
+    {
+        double eps = std::pow(0.1, i);
+        Eigen::VectorXd newQ = testQ + eps * dir;
+
+        Eigen::VectorXd grad1;
+        computeFloorGradeint(newQ, grad1);
+        std::cout << "eps: " << eps << std::endl;
+        std::cout << "finite difference: " << ((grad1 - grad) / eps).norm() << ", directional derivative: " << (H * dir).norm() << ", error: " << ((grad1 - grad) / eps - H * dir).norm() << std::endl;
+    }
+}
+
+void PhysicalModel::testInternalBarrierEnergy(Eigen::VectorXd q)
+{
+    int vid0 = restF_(0, 0);
+    int vid1 = restF_(0, 1);
+
+    Eigen::VectorXd testQ = q;
+    testQ(vid0) = testQ(vid1) + params_.barrierEps * 0.5;
+
+    Eigen::VectorXd grad;
+    double E = computeInternalBarrier(testQ);
+    computeInternalGradient(testQ, grad);
+
+    Eigen::VectorXd  dir = Eigen::VectorXd::Random(grad.size());
+
+    for(int i = 3; i <= 9; i++)
+    {
+        double eps = std::pow(0.1, i);
+        Eigen::VectorXd newQ = testQ + eps * dir;
+
+        double E1 = computeInternalBarrier(newQ);
+        std::cout << "eps: " << eps << std::endl;
+        std::cout << "finite difference: " << (E1 - E) / eps << ", directional derivative: " << dir.dot(grad) << ", error: " << std::abs((E1 - E) / eps - dir.dot(grad)) << std::endl;
+    }
+
+
+}
+
+void PhysicalModel::testInternalBarrierGradient(Eigen::VectorXd q)
+{
+    int vid0 = restF_(0, 0);
+    int vid1 = restF_(0, 1);
+
+    Eigen::VectorXd testQ = q;
+    testQ(vid0) = testQ(vid1) + params_.barrierEps * 0.5;
+
+    Eigen::VectorXd grad;
+    Eigen::SparseMatrix<double> H;
+    std::vector<Eigen::Triplet<double>> T;
+
+    computeInternalGradient(testQ, grad);
+    computeInternalHessian(testQ, T);
+    H.resize(q.size(), q.size());
+    H.setFromTriplets(T.begin(), T.end());
+
+    Eigen::VectorXd  dir = Eigen::VectorXd::Random(grad.size());
+
+    for(int i = 3; i <= 9; i++)
+    {
+        double eps = std::pow(0.1, i);
+        Eigen::VectorXd newQ = testQ + eps * dir;
+
+        Eigen::VectorXd grad1;
+        computeInternalGradient(newQ, grad1);
+        std::cout << "eps: " << eps << std::endl;
+        std::cout << "finite difference: " << ((grad1 - grad) / eps).norm() << ", directional derivative: " << (H * dir).norm() << ", error: " << ((grad1 - grad) / eps - H * dir).norm() << std::endl;
     }
 }
