@@ -32,4 +32,6 @@ option(LIBIGL_WITH_VIEWER            "Use OpenGL viewer"  ON)
 option(LIBIGL_WITH_XML               "Use XML"            OFF)
 
 find_package(LIBIGL REQUIRED QUIET)
+find_package(SPECTRA REQUIRED QUIET)
+include_directories(${SPECTRA_INCLUDE_DIRS})
 add_subdirectory(example)

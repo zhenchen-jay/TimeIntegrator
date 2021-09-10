@@ -150,6 +150,10 @@ bool keyCallback(igl::opengl::glfw::Viewer& viewer, unsigned int key, int modifi
 
 int main(int argc, char* argv[])
 {
+	Eigen::MatrixXd V;
+	Eigen::MatrixXi F;
+	igl::readOBJ("E:/twistedAnnulus/StVK/70k/annulus_convergence/stvk/stvk_171.obj", V, F);
+	std::cout << V.col(2).maxCoeff() << std::endl;
 	bool offlineSimulation = false;
 	std::cout << argc << std::endl;
 	if (argc >= 2)
@@ -282,6 +286,27 @@ int main(int argc, char* argv[])
 			    hook->drawGUI(menu);
 			else
 			    FEM->drawGUI(menu);
+			return false;
+		};
+
+		menu.callback_draw_custom_window = [&]()
+		{
+			if (ImGui::CollapsingHeader("Simulation Control", ImGuiTreeNodeFlags_DefaultOpen))
+			{
+				if (ImGui::Button("Run Sim", ImVec2(-1, 0)))
+				{
+					toggleSimulation(viewer);
+				}
+				if (ImGui::Button("Reset Sim", ImVec2(-1, 0)))
+				{
+					resetSimulation(viewer);
+				}
+
+			}
+			if (isHookModel)
+				hook->drawGUI(menu);
+			else
+				FEM->drawGUI(menu);
 			return false;
 		};
 

@@ -31,8 +31,15 @@ double NeoHookean::computeElasticPotentialPerface(Eigen::VectorXd q, int faceId)
 			dr = q(reducedV1) - q(reducedV0);
 	}
 
-	double s = dr * dr / (drRest * drRest);
-	double lnJ = std::log(s) / 2;
+	double J = dr / drRest;
+	double s = J * J;
+
+	if (J < 0)
+	{
+		std::cerr << "invert happens in the neohookean model. J = " << J << std::endl;
+		exit(1);
+	}
+	double lnJ = std::log(J);
 
 	energy = 0.5 * (mu_ * (s - 1 - 2 * lnJ) + lambda_ * lnJ * lnJ) * std::abs(drRest);
 
@@ -81,11 +88,18 @@ void NeoHookean::computeElasticGradientPerface(Eigen::VectorXd q, int faceId, Ei
 
 	}
 
-	double s = dr * dr / (drRest * drRest);
-	double lnJ = std::log(s) / 2;
+	double J = dr / drRest;
+	if (J < 0)
+	{
+		std::cerr << "invert happens in the neohookean model. J = " << J << std::endl;
+		exit(1);
+	}
+	double s = J * J;
+	double lnJ = std::log(J);
 
-	Eigen::Vector2d grads = 2 * gradDr * dr / (drRest * drRest);
-	Eigen::Vector2d gradlnJ = grads / (2 * s);
+	Eigen::Vector2d gradJ = gradDr / drRest;
+	Eigen::Vector2d grads = 2 * J * gradJ;
+	Eigen::Vector2d gradlnJ = gradJ / J;
 
 	grad = 0.5 * (mu_ * (grads - 2 * gradlnJ) + 2 * lambda_ * lnJ * gradlnJ) * std::abs(drRest);
 }
@@ -131,14 +145,22 @@ void NeoHookean::computeElasticHessianPerface(Eigen::VectorXd q, int faceId, Eig
 	    }
 
 	}
-	double s = dr * dr / (drRest * drRest);
-	double lnJ = std::log(s) / 2;
 
-	Eigen::Vector2d grads = 2 * gradDr * dr / (drRest * drRest);
-	Eigen::Vector2d gradlnJ = grads / (2 * s);
+	double J = dr / drRest;
+	if (J < 0)
+	{
+		std::cerr << "invert happens in the neohookean model. J = " << J << std::endl;
+		exit(1);
+	}
+	double s = J * J;
+	double lnJ = std::log(J);
 
-	Eigen::Matrix2d hesss = 2 * gradDr * gradDr.transpose() / (drRest * drRest);
-	Eigen::Matrix2d hesslnJ = hesss / (2 * s) - grads * grads.transpose() / (2 * s * s);
+	Eigen::Vector2d gradJ = gradDr / drRest;
+	Eigen::Vector2d grads = 2 * J * gradJ;
+	Eigen::Vector2d gradlnJ = gradJ / J;
+
+	Eigen::Matrix2d hesss = 2 * gradJ * gradJ.transpose();
+	Eigen::Matrix2d hesslnJ = -gradJ * gradJ.transpose() / (J * J);
 
 	hess = 0.5 * (mu_ * (hesss - 2 * hesslnJ) + 2 * lambda_ * (lnJ * hesslnJ + gradlnJ * gradlnJ.transpose())) * std::abs(drRest);
 }

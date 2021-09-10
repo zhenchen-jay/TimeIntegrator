@@ -140,19 +140,23 @@ void FiniteElementsGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu& menu)
 
 	if (ImGui::Button("Test Gradient and Hessian", ImVec2(-1, 0)))
 	{
-	   std::cout << "test floor barrier: " << std::endl;
-	   std::cout << "f-g: " << std::endl;
-	   model_->testFloorBarrierEnergy(curQ_);
+		std::cout << "test floor barrier: " << std::endl;
+		std::cout << "f-g: " << std::endl;
+		model_->testFloorBarrierEnergy(curQ_);
 
-	   std::cout << "g-h: " << std::endl;
-	   model_->testFloorBarrierGradient(curQ_);
+		std::cout << "g-h: " << std::endl;
+		model_->testFloorBarrierGradient(curQ_);
 
-	   std::cout << "test internal barrier: " << std::endl;
-	   std::cout << "f-g: " << std::endl;
-	   model_->testInternalBarrierEnergy(curQ_);
-	   std::cout << "g-h: " << std::endl;
-	   model_->testInternalBarrierGradient(curQ_);
-//
+		std::cout << "test internal barrier: " << std::endl;
+		std::cout << "f-g: " << std::endl;
+		model_->testInternalBarrierEnergy(curQ_);
+		std::cout << "g-h: " << std::endl;
+		model_->testInternalBarrierGradient(curQ_);
+
+		std::cout << "test Elastic potential: " << std::endl;
+		model_->testElasticEnergy(curQ_);
+		model_->testElasticGradient(curQ_);
+		//
 		model_->testPotentialDifferential(curQ_);
 		model_->testGradientDifferential(curQ_);
 	}
@@ -198,7 +202,7 @@ void FiniteElementsGui::updateRenderGeometry()
 	    faces.push_back(Eigen::Vector3i(idx + 3, idx + 4, idx + 5));
 	    idx += 6;
 
-	    for (int i = 0; i < 6; i++)
+	   /* for (int i = 0; i < 6; i++)
 	    {
 	        vertsColors.push_back(Eigen::Vector3d(0, 0, 0));
 	    }
@@ -213,7 +217,7 @@ void FiniteElementsGui::updateRenderGeometry()
 	    verts.push_back(Eigen::Vector3d(params_.topLine, params_.topLine, eps));
 	    verts.push_back(Eigen::Vector3d(params_.topLine, params_.topLine + 0.01 * params_.topLine, eps));
 	    faces.push_back(Eigen::Vector3i(idx + 3, idx + 4, idx + 5));
-	    idx += 6;
+	    idx += 6;*/
 	}
 
 	for (int i = 0; i < curPos_.size(); i++)
@@ -276,13 +280,19 @@ void FiniteElementsGui::getOutputFolderPath()
 {
 	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
 	{
-		outputFolderPath_ = baseFolder_ + "Harmonic1d/" + std::to_string(params_.timeStep) + "_" + std::to_string(params_.barrierStiffness) + "/";
+		outputFolderPath_ = baseFolder_ + "Harmonic1d/" + std::to_string(params_.timeStep) + "_" + std::to_string(params_.barrierStiffness) + "_numSeg_" + std::to_string(params_.numSegs) + "/";
 	}
 
 	else
 	{
-		outputFolderPath_ = baseFolder_ + "Pogo_Stick/" + std::to_string(params_.timeStep) + "_" + std::to_string(params_.barrierStiffness) + "/";
+		outputFolderPath_ = baseFolder_ + "Pogo_Stick/" + std::to_string(params_.timeStep) + "_" + std::to_string(params_.barrierStiffness) + "_numSeg_" + std::to_string(params_.numSegs) + "/";
 	}
+
+	if (params_.materialType == SimParameters::MT_LINEAR)
+		outputFolderPath_ = outputFolderPath_ + "Linear/";
+	else
+		outputFolderPath_ = outputFolderPath_ + "NeoHookean/";
+
 	switch (params_.integrator)
 	{
 	case SimParameters::TI_EXPLICIT_EULER:
@@ -359,6 +369,8 @@ void FiniteElementsGui::initSimulation()
 	if (params_.modelType == SimParameters::MT_HARMONIC_1D)
 	{
 	    Eigen::VectorXd restPos = curPos_;
+		Eigen::VectorXd massVec = restPos;
+
 		curPos_(0) = params_.barHeight + params_.barLen;
 		restPos(0) = params_.barHeight + params_.barLen;
 		for (int i = 1; i <= params_.numSegs; i++)
@@ -366,10 +378,10 @@ void FiniteElementsGui::initSimulation()
 			curPos_(i) = curPos_(0) - params_.barLen * i / params_.numSegs;
 			restPos(i) = curPos_(0) - 0.8 * params_.barLen * i / params_.numSegs;
 			curF_.row(i - 1) << i - 1, i;
-		}
-		Eigen::VectorXd massVec = restPos;
-		massVec.setConstant(1.0);
 
+			massVec(i) = params_.particleMass * params_.barLen / params_.numSegs;
+		}
+		
 		std::map<int, double> clampedPoints;
 		clampedPoints[0] = curPos_(0);
 		model_->initialize(restPos, curF_, massVec, &clampedPoints);
@@ -504,7 +516,7 @@ bool FiniteElementsGui::simulateOneStep()
 	    else if(params_.materialType == SimParameters::MT_NEOHOOKEAN)
 	    {
 	        std::cout << "model type: NeoHookean. Time integration: TRBDF2." << std::endl;
-	        TimeIntegrator::trapezoid<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
+	        TimeIntegrator::trapezoidBDF2<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
 	    }
 		break;
 	case SimParameters::TI_BDF2:
@@ -518,7 +530,7 @@ bool FiniteElementsGui::simulateOneStep()
 		    else if(params_.materialType == SimParameters::MT_NEOHOOKEAN)
 		    {
 		        std::cout << "model type: NeoHookean. Time integration: BDF2." << std::endl;
-		        TimeIntegrator::trapezoid<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
+		        TimeIntegrator::implicitEuler<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
 		    }
 		}
 
@@ -532,7 +544,7 @@ bool FiniteElementsGui::simulateOneStep()
 		    else if(params_.materialType == SimParameters::MT_NEOHOOKEAN)
 		    {
 		        std::cout << "model type: NeoHookean. Time integration: BDF2." << std::endl;
-		        TimeIntegrator::trapezoid<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
+		        TimeIntegrator::BDF2<NeoHookean>(curQ_, curVel_, preQ_, preVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
 		    }
 		}
 
@@ -546,7 +558,7 @@ bool FiniteElementsGui::simulateOneStep()
 	    else if(params_.materialType == SimParameters::MT_NEOHOOKEAN)
 	    {
 	        std::cout << "model type: NeoHookean. Time integration: Newmark." << std::endl;
-	        TimeIntegrator::trapezoid<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
+	        TimeIntegrator::Newmark<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew, params_.NM_gamma, params_.NM_beta);
 	    }
 		break;
 	}

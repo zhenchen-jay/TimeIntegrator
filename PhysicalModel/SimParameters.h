@@ -44,7 +44,7 @@ struct SimParameters
         totalTime = 20;
         totalNumIter = totalTime / timeStep;
 
-        numSegs = 100;
+        numSegs = 10;
         topLine = 20;
         barLen = 10;
         barHeight = 5;

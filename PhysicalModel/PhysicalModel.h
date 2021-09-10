@@ -74,6 +74,10 @@ public:
 	void testPotentialDifferentialPerface(Eigen::VectorXd q, int faceId);
 	void testGradientDifferentialPerface(Eigen::VectorXd q, int faceId);
 
+	void testElasticEnergy(Eigen::VectorXd q);
+	void testElasticGradient(Eigen::VectorXd q);
+	
+
 public:
 	SimParameters params_;
 	Eigen::VectorXd restPos_;
