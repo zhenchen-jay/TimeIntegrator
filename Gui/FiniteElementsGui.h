@@ -15,6 +15,7 @@
 #include "../PhysicalModel/NeoHookean.h"
 #include "../PhysicalModel/SimParameters.h"
 #include "../PhysicalModel/SceneObjects.h"
+#include "../SpectraAnalysis/SpectraAnalysisLinearElements.h"
 
 #include "../include/Utils/GIF.h"
 
@@ -76,10 +77,17 @@ private:
 	Eigen::VectorXd curQ_;
 	Eigen::VectorXd curVel_;
 
+	Eigen::VectorXd curQTheo_;
+	Eigen::VectorXd curVelTheo_;
+
 	Eigen::VectorXd preQ_;
 	Eigen::VectorXd preVel_;
 
+	Eigen::VectorXd preQTheo_;
+	Eigen::VectorXd preVelTheo_;
+
 	Eigen::VectorXd curPos_;
+	Eigen::VectorXd curPosTheo_;
 	Eigen::MatrixXi curF_;
 
 	Eigen::MatrixXd renderQ;
@@ -91,6 +99,7 @@ private:
 
 
 	std::shared_ptr<PhysicalModel> model_;
+	SpectraAnalysisLinearElements theoModel_;
 	double GIFScale_;
 	GifWriter GIFWriter_;
 	uint32_t GIFDelay_;
@@ -106,6 +115,7 @@ private:
 
 public:
 	bool isPaused_;
+	bool isTheoretical_;
 	std::string outputFolderPath_, baseFolder_;
 	double time_;
 	int iterNum_;

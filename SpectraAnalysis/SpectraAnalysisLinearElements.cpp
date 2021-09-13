@@ -1,12 +1,16 @@
 #include <iostream>
+#include <Eigen/Eigenvalues>
 #include "SpectraAnalysisLinearElements.h"
 
-SpectraAnalysisLinearElements::SpectraAnalysisLinearElements(const SimParameters& params, Eigen::VectorXd& q0, Eigen::VectorXd& v0, const LinearElements& model, int numSpectras)
+SpectraAnalysisLinearElements::SpectraAnalysisLinearElements(const SimParameters& params, Eigen::VectorXd& q0, Eigen::VectorXd& v0, const LinearElements& model)
 {
 	params_ = params;
 	q0_ = q0;
 	v0_ = v0;
-	numSpectras_ = numSpectras;
+	numSpectras_ = params.numSpectra;
+
+	if (numSpectras_ > q0.size())
+		numSpectras_ = q0.size();
 
 	model_ = model;
 
@@ -27,40 +31,104 @@ void SpectraAnalysisLinearElements::initialization()
 	massInvMat_.resize(q0_.size(), q0_.size());
 
 	massMat_.setFromTriplets(T.begin(), T.end());
-	massInvMat_.setFromTriplets(T1.begin(), T.end());
+	massInvMat_.setFromTriplets(T1.begin(), T1.end());
 
 	// compute the eigen modes
-	T.clear();
-	model_.computeElasticHessian(q0_, T);
-	K_.resize(q0_.size(), q0_.size());
-	K_.setFromTriplets(T.begin(), T.end());
+	model_.computeHessian(q0_, K_);
 
 	Eigen::VectorXd g;
-	model_.computeElasticGradient(q0_, g);
+	model_.computeGradient(q0_, g);
 	b_ = g - K_ * q0_;
 
-	Spectra::SparseSymMatProd<double> opK(K_);
-	Spectra::SparseCholesky<double> opM(massMat_);
 
-	Spectra::SymGEigsSolver<Spectra::SparseSymMatProd<double>, Spectra::SparseCholesky<double>, Spectra::GEigsMode::Cholesky> eigs(opK, opM, numSpectras_, 2 * numSpectras_);
+	// check the energy
+	Eigen::VectorXd testQ = q0_;
+	testQ.setZero();
+	double E0 = model_.computeEnergy(testQ);
+	double E = model_.computeEnergy(q0_);
+	double E1 = 0.5 * q0_.dot(K_ * q0_) + q0_.dot(b_) + E0;
 
-	eigs.init();
-	int nconv = eigs.compute(Spectra::SortRule::LargestAlge);
-	if (eigs.info() == Spectra::CompInfo::Successful)
+
+	std::cout << "E = " << E << ", E1 = " << E1 << ", error = " << E1 - E << std::endl;
+
+	
+	testQ.setRandom();
+	E = model_.computeEnergy(testQ);
+	E1 = 0.5 * testQ.dot(K_ * testQ) + testQ.dot(b_) + E0;
+	std::cout << "E = " << E << ", E1 = " << E1 << ", error = " << E1 - E << std::endl;
+
+	if (numSpectras_ < q0_.size())
 	{
-		eigenValues_ = eigs.eigenvalues();
-		eigenVecs_ = eigs.eigenvectors();
+		Spectra::SparseSymMatProd<double> opK(K_);
+		Spectra::SparseCholesky<double> opM(massMat_);
+
+		Spectra::SymGEigsSolver<Spectra::SparseSymMatProd<double>, Spectra::SparseCholesky<double>, Spectra::GEigsMode::Cholesky> eigs(opK, opM, numSpectras_, (2 * numSpectras_ > q0_.size()) ? q0_.size() : 2 * numSpectras_);
+
+		eigs.init();
+		int nconv = eigs.compute(Spectra::SortRule::LargestMagn);
+		if (eigs.info() == Spectra::CompInfo::Successful)
+		{
+			std::cout << eigs.eigenvalues() << std::endl;
+			eigenValues_ = eigs.eigenvalues();
+			eigenVecs_ = eigs.eigenvectors();
+		}
+		else
+		{
+			std::cerr << "error in t computing the eigen values of the M^{-1} K " << std::endl;
+			exit(1);
+		}
 	}
+	
 	else
 	{
-		std::cerr << "error in t computing the eigen values of the M^{-1} K " << std::endl;
-		exit(1);
+		int halfNum = numSpectras_ / 2;
+		Spectra::SparseSymMatProd<double> opK(K_);
+		Spectra::SparseCholesky<double> opM(massMat_);
+
+		Spectra::SymGEigsSolver<Spectra::SparseSymMatProd<double>, Spectra::SparseCholesky<double>, Spectra::GEigsMode::Cholesky> eigs(opK, opM, halfNum, numSpectras_);
+
+		eigs.init();
+		eigs.compute(Spectra::SortRule::LargestMagn);
+		
+		int leftNum = numSpectras_ - halfNum;
+
+		using OpType = Spectra::SymShiftInvert<double, Eigen::Sparse, Eigen::Sparse>;
+		using BOpType = Spectra::SparseSymMatProd<double>;
+		OpType op(K_, massMat_);
+		BOpType Bop(massMat_);
+
+		Spectra::SymGEigsShiftSolver<OpType, BOpType, Spectra::GEigsMode::ShiftInvert> eigs1(op, Bop, leftNum, numSpectras_, 0.0);
+		eigs1.init();
+		eigs1.compute(Spectra::SortRule::LargestMagn);
+
+		if (eigs.info() == Spectra::CompInfo::Successful && eigs1.info() == Spectra::CompInfo::Successful)
+		{
+			std::cout << eigs.eigenvalues() << std::endl;
+			std::cout << eigs1.eigenvalues() << std::endl;
+
+			eigenValues_.resize(numSpectras_);
+			eigenValues_.segment(0, halfNum) = eigs.eigenvalues();
+			eigenValues_.segment(halfNum, leftNum) = eigs1.eigenvalues();
+
+			eigenVecs_.resize(q0_.size(), numSpectras_);
+			eigenVecs_.block(0, 0, q0_.size(), halfNum) = eigs.eigenvectors();
+			eigenVecs_.block(0, halfNum, q0_.size(), leftNum) = eigs1.eigenvectors();
+		}
+		else
+		{
+			// super low when size of q is large
+			Eigen::GeneralizedEigenSolver<Eigen::MatrixXd> ges;
+			ges.compute(K_.toDense(), massMat_.toDense());
+			eigenValues_ = ges.eigenvalues().real();
+			eigenVecs_ = ges.eigenvectors().real();
+		}
+		
 	}
+	
 
 	// check the othonormality
-	Eigen::MatrixXd idMat = massMat_;
-	idMat.setIdentity();
-	std::cout << "error: " << (eigenVecs_.transpose() * massMat_ * eigenValues_ - idMat).norm() << std::endl;
+	Eigen::MatrixXd idMat = Eigen::MatrixXd::Identity(numSpectras_, numSpectras_);
+	std::cout << "error: " << (eigenVecs_.transpose() * massMat_ * eigenVecs_ - idMat).norm() << std::endl;
 	
 	// compute initial alphas and betas
 	curAlphaBeta_.resize(numSpectras_);
@@ -136,9 +204,9 @@ void SpectraAnalysisLinearElements::updateAlphasBetas()
 			A << 1, -gamma * h, eigenValues_[i] * gamma* h, 1;
 			Ainv = A.inverse();
 
-			A << 1, gamma * h, -eigenValues_[i] * gamma* h, 1;
+			A1 << 1, gamma * h, -eigenValues_[i] * gamma* h, 1;
 
-			consVec << 0, -gamma * h * cis_[i];
+			consVec << 0, -2 * gamma * h * cis_[i];
 			alphabeta = Ainv * (A1 * curAlphaBeta_[i] + consVec);
 
 			A << 1, -gamma2 * h, eigenValues_[i] * gamma2 * h, 1;
@@ -187,4 +255,22 @@ void SpectraAnalysisLinearElements::updateAlphasBetas()
 		}
 	}
 	curTime_ += h;
+}
+
+void SpectraAnalysisLinearElements::getCurPosVel(Eigen::VectorXd& pos, Eigen::VectorXd& vel)
+{
+	if (curAlphaBeta_.size() != numSpectras_)
+	{
+		std::cerr << "mismatch in alpha beta vector size and number of spectras." << std::endl;
+		exit(1);
+	}
+
+	pos.setZero(eigenVecs_.rows());
+	vel.setZero(eigenVecs_.rows());
+
+	for (int i = 0; i < numSpectras_; i++)
+	{
+		pos += curAlphaBeta_[i](0) * eigenVecs_.col(i);
+		vel += curAlphaBeta_[i](1) * eigenVecs_.col(i);
+	}
 }

@@ -253,7 +253,9 @@ int main(int argc, char* argv[])
 			FEM->reset();
 			FEM->renderRenderGeometry(viewer);
 			viewer.data().set_face_based(false);
-			viewer.core().camera_zoom = 2.10;
+
+			if(FEM->params_.floorEnabled)
+				viewer.core().camera_zoom = 2.10;
 		}
 		viewer.data().show_lines = false;
 		viewer.core().background_color << 1.0f, 1.0f, 1.0f, 1.0f;
@@ -289,7 +291,7 @@ int main(int argc, char* argv[])
 			return false;
 		};
 
-		menu.callback_draw_custom_window = [&]()
+		/*menu.callback_draw_custom_window = [&]()
 		{
 			if (ImGui::CollapsingHeader("Simulation Control", ImGuiTreeNodeFlags_DefaultOpen))
 			{
@@ -308,7 +310,7 @@ int main(int argc, char* argv[])
 			else
 				FEM->drawGUI(menu);
 			return false;
-		};
+		};*/
 
 		viewer.launch();
 	}

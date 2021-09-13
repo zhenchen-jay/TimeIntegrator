@@ -1,8 +1,11 @@
 #pragma once
 
 #include <MatOp/SparseCholesky.h>
-
+#include <MatOp/SparseRegularInverse.h>
+#include <MatOp/SymShiftInvert.h>
+#include <MatOp/SparseSymMatProd.h>
 #include <SymGEigsSolver.h>
+#include <SymGEigsShiftSolver.h>
 
 #include "../PhysicalModel/SimParameters.h"
 #include "../PhysicalModel/PhysicalModel.h"
@@ -14,10 +17,12 @@ public:
 	SpectraAnalysisLinearElements() {}
 	~SpectraAnalysisLinearElements() {}
 
-	SpectraAnalysisLinearElements(const SimParameters& params, Eigen::VectorXd& q0, Eigen::VectorXd& v0, const LinearElements& model, int numSpectras);
+	SpectraAnalysisLinearElements(const SimParameters& params, Eigen::VectorXd& q0, Eigen::VectorXd& v0, const LinearElements& model);
 	
 	void initialization();
 	void updateAlphasBetas();
+	
+	void getCurPosVel(Eigen::VectorXd &pos, Eigen::VectorXd &vel);
 
 
 public:

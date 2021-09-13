@@ -97,8 +97,12 @@ void FiniteElementsGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu& menu)
 		if (ImGui::InputDouble("Spring Stiffness", &params_.springStiffness))
 			updateParams();
 		if (ImGui::InputDouble("Total Time", &params_.totalTime))
-			updateParams();
+			reset();
 		if (ImGui::InputDouble("IPC Barrier stiffness", &params_.barrierStiffness))
+			reset();
+		if (ImGui::InputInt("Number of Spectra", &params_.numSpectra))
+			reset();
+		if (ImGui::Checkbox("Save Info", &params_.isSaveInfo))
 			updateParams();
 	}
 	if (ImGui::CollapsingHeader("Forces", ImGuiTreeNodeFlags_DefaultOpen))
@@ -222,8 +226,8 @@ void FiniteElementsGui::updateRenderGeometry()
 
 	for (int i = 0; i < curPos_.size(); i++)
 	{
+	    verts.push_back(Eigen::Vector3d(-0.03 * params_.topLine, curPos_(i), 0));
 	    verts.push_back(Eigen::Vector3d(-0.01 * params_.topLine, curPos_(i), 0));
-	    verts.push_back(Eigen::Vector3d(0.01 * params_.topLine, curPos_(i), 0));
 
 		Eigen::RowVector3d color;
 
@@ -241,6 +245,31 @@ void FiniteElementsGui::updateRenderGeometry()
 		idx += 2;
 	}
 
+	if (isTheoretical_)
+	{
+		for (int i = 0; i < curPosTheo_.size(); i++)
+		{
+			verts.push_back(Eigen::Vector3d(0.01 * params_.topLine, curPosTheo_(i), 0));
+			verts.push_back(Eigen::Vector3d(0.03 * params_.topLine, curPosTheo_(i), 0));
+
+			Eigen::RowVector3d color;
+
+			igl::colormap(igl::COLOR_MAP_TYPE_VIRIDIS, 4.0 / 9.0, color.data());
+
+			//color << 255, 175, 255;
+			vertsColors.push_back(color);
+			vertsColors.push_back(color);
+
+			if (i != curPosTheo_.size() - 1)
+			{
+				faces.push_back(Eigen::Vector3i(idx + 1, idx, idx + 3));
+				faces.push_back(Eigen::Vector3i(idx + 3, idx, idx + 2));
+			}
+			idx += 2;
+		}
+	}
+	
+
 	renderQ.resize(verts.size(), 3);
 	for (int i = 0; i < verts.size(); i++)
 	{
@@ -256,23 +285,43 @@ void FiniteElementsGui::updateRenderGeometry()
 	    renderC.row(i) = vertsColors[i];
 	}
 
-	edgeStart.setZero(curPos_.size() * 3 - 2, 3);
+	if (isTheoretical_)
+		edgeStart.setZero(2 * (curPos_.size() * 3 - 2), 3);
+	else
+		edgeStart.setZero(curPos_.size() * 3 - 2, 3);
 	edgeEnd = edgeStart;
 
 	for(int i = 0; i < curPos_.size(); i++)
 	{
-	    edgeStart.row(i) = Eigen::Vector3d(-0.01 * params_.topLine, curPos_(i), 0);
-	    edgeEnd.row(i) = Eigen::Vector3d(0.01 * params_.topLine, curPos_(i), 0);
+	    edgeStart.row(i) = Eigen::Vector3d(-0.03 * params_.topLine, curPos_(i), 0);
+	    edgeEnd.row(i) = Eigen::Vector3d(-0.01 * params_.topLine, curPos_(i), 0);
 
 		if (i < curPos_.size() - 1)
 		{
-		    edgeStart.row(2 * i + curPos_.size()) = Eigen::Vector3d(-0.01 * params_.topLine, curPos_(i), 0);
-		    edgeEnd.row(2 * i + curPos_.size()) = Eigen::Vector3d(-0.01 * params_.topLine, curPos_(i + 1), 0);
+		    edgeStart.row(2 * i + curPos_.size()) = Eigen::Vector3d(-0.03 * params_.topLine, curPos_(i), 0);
+		    edgeEnd.row(2 * i + curPos_.size()) = Eigen::Vector3d(-0.03 * params_.topLine, curPos_(i + 1), 0);
 
-		    edgeStart.row(2 * i + curPos_.size() + 1) = Eigen::Vector3d(0.01 * params_.topLine, curPos_(i), 0);
-		    edgeEnd.row(2 * i + curPos_.size() + 1) = Eigen::Vector3d(0.01 * params_.topLine, curPos_(i + 1), 0);
+		    edgeStart.row(2 * i + curPos_.size() + 1) = Eigen::Vector3d(-0.01 * params_.topLine, curPos_(i), 0);
+		    edgeEnd.row(2 * i + curPos_.size() + 1) = Eigen::Vector3d(-0.01 * params_.topLine, curPos_(i + 1), 0);
 		}
-		
+	}
+
+	if (isTheoretical_)
+	{
+		for (int i = 0; i < curPosTheo_.size(); i++)
+		{
+			edgeStart.row(i + curPos_.size() * 3 - 2) = Eigen::Vector3d(0.01 * params_.topLine, curPosTheo_(i), 0);
+			edgeEnd.row(i + curPos_.size() * 3 - 2) = Eigen::Vector3d(0.03 * params_.topLine, curPosTheo_(i), 0);
+
+			if (i < curPos_.size() - 1)
+			{
+				edgeStart.row(2 * i + curPos_.size() + curPos_.size() * 3 - 2) = Eigen::Vector3d(0.01 * params_.topLine, curPosTheo_(i), 0);
+				edgeEnd.row(2 * i + curPos_.size() + curPos_.size() * 3 - 2) = Eigen::Vector3d(0.01 * params_.topLine, curPosTheo_(i + 1), 0);
+
+				edgeStart.row(2 * i + curPos_.size() + 1 + curPos_.size() * 3 - 2) = Eigen::Vector3d(0.03 * params_.topLine, curPosTheo_(i), 0);
+				edgeEnd.row(2 * i + curPos_.size() + 1 + curPos_.size() * 3 - 2) = Eigen::Vector3d(0.03 * params_.topLine, curPosTheo_(i + 1), 0);
+			}
+		}
 	}
 }
 
@@ -351,6 +400,11 @@ void FiniteElementsGui::initSimulation()
 	double deltax = params_.barLen / params_.numSegs;
 	std::cout << "max time step size according CFL is: " << deltax / std::sqrt(params_.youngs / params_.particleMass) << std::endl;
 
+	if (params_.modelType == SimParameters::MT_HARMONIC_1D && params_.materialType == SimParameters::MT_LINEAR && (params_.integrator == SimParameters::TI_IMPLICIT_EULER || params_.integrator == SimParameters::TI_BDF2 || params_.integrator == SimParameters::TI_NEWMARK || params_.integrator == SimParameters::TI_TR_BDF2) && params_.gravityEnabled == false)
+	{
+		isTheoretical_ = true;
+	}
+
 
     switch (params_.materialType)
     {
@@ -414,11 +468,35 @@ void FiniteElementsGui::initSimulation()
 	preQ_ = curQ_;
 	curVel_.setZero(curQ_.size());
 	preVel_ = curVel_;
+
+	if (isTheoretical_)
+	{
+		curQTheo_ = curQ_;
+		curVelTheo_ = curVel_;
+
+		preQTheo_ = preQ_;
+		preVelTheo_ = preVel_;
+
+		curPosTheo_ = curPos_;
+
+		theoModel_ = SpectraAnalysisLinearElements(params_, curQTheo_, curVelTheo_, *(static_cast<LinearElements*>(model_.get())));
+	}
 }
 
 bool FiniteElementsGui::simulateOneStep()
 {
     std::cout << "simulate one step." << std::endl;
+
+	if (isTheoretical_)
+	{
+		preQTheo_ = curQTheo_;
+		preVelTheo_ = curVel_;
+
+		theoModel_.updateAlphasBetas();
+		theoModel_.getCurPosVel(curQTheo_, curVelTheo_);
+		model_->convertVar2Pos(curQTheo_, curPosTheo_);
+	}
+
 	Eigen::VectorXd posNew, velNew;
 	switch (params_.integrator)
 	{
@@ -580,10 +658,14 @@ void FiniteElementsGui::saveInfo()
 	std::string statFileName = outputFolderPath_ + std::string("simulation_status.txt");
 	std::ofstream sfs;
 
-	if (time_)
-		sfs.open(statFileName, std::ofstream::out | std::ofstream::app);
-	else
-		sfs.open(statFileName, std::ofstream::out);
+	if (params_.isSaveInfo)
+	{
+		if (time_)
+			sfs.open(statFileName, std::ofstream::out | std::ofstream::app);
+		else
+			sfs.open(statFileName, std::ofstream::out);
+	}
+	
 	double springPotential = model_->computeElasticPotential(curQ_);
 	double gravityPotential = model_->computeGravityPotential(curQ_);
 	double IPCbarier = model_->computeFloorBarrier(curQ_);
@@ -601,8 +683,18 @@ void FiniteElementsGui::saveInfo()
 	    internalContact = model_->computeInternalBarrier(curQ_);
 
 	double bottom = curQ_.minCoeff();
-
-	sfs << time_ << " " << springPotential << " " << gravityPotential << " " << model_->params_.barrierStiffness * IPCbarier << " " << internalContact * model_->params_.barrierStiffness << " " << kineticEnergy << " " << springPotential + gravityPotential + model_->params_.barrierStiffness * IPCbarier + kineticEnergy << " " << bottom << std::endl;
-	std::cout << time_ << ", spring: " << springPotential << ", gravity: " << gravityPotential << ", IPC barrier: " << model_->params_.barrierStiffness * IPCbarier << " , Internal Barrier: " << internalContact * model_->params_.barrierStiffness << ", kinetic: " << kineticEnergy << ", total: " << springPotential + gravityPotential + model_->params_.barrierStiffness * IPCbarier + kineticEnergy << ", bottom pos: " << bottom << std::endl;
+	if(params_.isSaveInfo)
+		sfs << time_ << " " << springPotential << " " << gravityPotential << " " << model_->params_.barrierStiffness * IPCbarier << " " << internalContact * model_->params_.barrierStiffness << " " << kineticEnergy << " " << springPotential + gravityPotential + model_->params_.barrierStiffness * IPCbarier + kineticEnergy << " " << bottom;
+	std::cout << time_ << ", spring: " << springPotential << ", gravity: " << gravityPotential << ", IPC barrier: " << model_->params_.barrierStiffness * IPCbarier << " , Internal Barrier: " << internalContact * model_->params_.barrierStiffness << ", kinetic: " << kineticEnergy << ", total: " << springPotential + gravityPotential + model_->params_.barrierStiffness * IPCbarier + kineticEnergy << ", bottom pos: " << bottom;
+	if (isTheoretical_)
+	{
+		double theoBot = curQTheo_.minCoeff();
+		if (params_.isSaveInfo)
+			sfs << " " << theoBot << std::endl;
+		std::cout << ", theoretical bottom: " << theoBot << ", error: " << theoBot - bottom << std::endl;
+	}
+	if (params_.isSaveInfo)
+		sfs << std::endl;
+	std::cout << std::endl;
 
 }

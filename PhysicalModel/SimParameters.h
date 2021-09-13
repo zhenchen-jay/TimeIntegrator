@@ -12,14 +12,14 @@ struct SimParameters
         NewtonMaxIters = 20;
         NewtonTolerance = 1e-8;
 
-        gravityEnabled = true;
-        gravityG = -10;
+        gravityEnabled = false;
+        gravityG = 0;
         springsEnabled = true;
         springStiffness = 1e3;
         maxSpringStrain = 0.2;
         dampingEnabled = true;
         dampingStiffness = 1.0;
-        floorEnabled = true;
+        floorEnabled = false;
 		frictionEnabled = false;
 
         youngs = 9e2;
@@ -36,7 +36,7 @@ struct SimParameters
         NM_gamma = 0.5;
         NM_beta = 0.25;
 
-        modelType = MT_POGO_STICK;
+        modelType = MT_HARMONIC_1D;
         materialType = MT_LINEAR;
         barrierStiffness = 1;
         barrierEps = 0.01;
@@ -48,6 +48,9 @@ struct SimParameters
         topLine = 20;
         barLen = 10;
         barHeight = 5;
+
+        numSpectra = 10;
+        isSaveInfo = true;
 
     }
 
@@ -99,6 +102,9 @@ struct SimParameters
     double topLine;
     double barLen;
     double barHeight;
+
+    int numSpectra;
+    bool isSaveInfo;
 };
 
 #endif
