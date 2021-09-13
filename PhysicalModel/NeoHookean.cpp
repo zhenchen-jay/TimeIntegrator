@@ -6,6 +6,10 @@
 
 double NeoHookean::computeElasticPotentialPerface(Eigen::VectorXd q, int faceId)
 {
+	double mu = params_.youngsList[faceId] / (2 * (1 + params_.poisson));
+	double lambda = params_.youngsList[faceId] * params_.poisson / (1 + params_.poisson);
+	// for 3d lambda = Y * nu / (1 + nv) / (1 - 2 nv), for 2d  lambda = Y * nu / (1 + nv) / (1 - nv), and for 1d lambda = Y * nu / (1 + nv). In one dimensional case, the stiffness is 2 * mu + lambda = Y
+
 	double energy = 0;
 
 	int v0 = restF_(faceId, 0);
@@ -41,13 +45,17 @@ double NeoHookean::computeElasticPotentialPerface(Eigen::VectorXd q, int faceId)
 	}
 	double lnJ = std::log(J);
 
-	energy = 0.5 * (mu_ * (s - 1 - 2 * lnJ) + lambda_ * lnJ * lnJ) * std::abs(drRest);
+	energy = 0.5 * (mu * (s - 1 - 2 * lnJ) + lambda * lnJ * lnJ) * std::abs(drRest);
 
 	return energy;
 }
 
 void NeoHookean::computeElasticGradientPerface(Eigen::VectorXd q, int faceId, Eigen::Vector2d& grad)
 {
+	double mu = params_.youngsList[faceId] / (2 * (1 + params_.poisson));
+	double lambda = params_.youngsList[faceId] * params_.poisson / (1 + params_.poisson);
+	// for 3d lambda = Y * nu / (1 + nv) / (1 - 2 nv), for 2d  lambda = Y * nu / (1 + nv) / (1 - nv), and for 1d lambda = Y * nu / (1 + nv). In one dimensional case, the stiffness is 2 * mu + lambda = Y
+
 	grad.setZero();
 
 	int v0 = restF_(faceId, 0);
@@ -101,11 +109,15 @@ void NeoHookean::computeElasticGradientPerface(Eigen::VectorXd q, int faceId, Ei
 	Eigen::Vector2d grads = 2 * J * gradJ;
 	Eigen::Vector2d gradlnJ = gradJ / J;
 
-	grad = 0.5 * (mu_ * (grads - 2 * gradlnJ) + 2 * lambda_ * lnJ * gradlnJ) * std::abs(drRest);
+	grad = 0.5 * (mu * (grads - 2 * gradlnJ) + 2 * lambda * lnJ * gradlnJ) * std::abs(drRest);
 }
 
 void NeoHookean::computeElasticHessianPerface(Eigen::VectorXd q, int faceId, Eigen::Matrix2d& hess)
 {
+	double mu = params_.youngsList[faceId] / (2 * (1 + params_.poisson));
+	double lambda = params_.youngsList[faceId] * params_.poisson / (1 + params_.poisson);
+	// for 3d lambda = Y * nu / (1 + nv) / (1 - 2 nv), for 2d  lambda = Y * nu / (1 + nv) / (1 - nv), and for 1d lambda = Y * nu / (1 + nv). In one dimensional case, the stiffness is 2 * mu + lambda = Y
+
 	hess.setZero();
 
 	int v0 = restF_(faceId, 0);
@@ -162,5 +174,5 @@ void NeoHookean::computeElasticHessianPerface(Eigen::VectorXd q, int faceId, Eig
 	Eigen::Matrix2d hesss = 2 * gradJ * gradJ.transpose();
 	Eigen::Matrix2d hesslnJ = -gradJ * gradJ.transpose() / (J * J);
 
-	hess = 0.5 * (mu_ * (hesss - 2 * hesslnJ) + 2 * lambda_ * (lnJ * hesslnJ + gradlnJ * gradlnJ.transpose())) * std::abs(drRest);
+	hess = 0.5 * (mu * (hesss - 2 * hesslnJ) + 2 * lambda * (lnJ * hesslnJ + gradlnJ * gradlnJ.transpose())) * std::abs(drRest);
 }

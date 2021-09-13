@@ -12,14 +12,16 @@ public:
 	PhysicalModel(SimParameters simParams)
 	{
 		params_ = simParams;
-		mu_ = params_.youngs / (2 * (1 + params_.poisson));
-		lambda_ = params_.youngs * params_.poisson / (1 + params_.poisson);
-		// for 3d lambda = Y * nu / (1 + nv) / (1 - 2 nv), for 2d  lambda = Y * nu / (1 + nv) / (1 - nv), and for 1d lambda = Y * nu / (1 + nv). In one dimensional case, the stiffness is 2 * mu + lambda = Y
 	}
 	virtual ~PhysicalModel() = default;
 
 	void initialize(Eigen::VectorXd restPos, Eigen::MatrixXi restF, Eigen::VectorXd massVec, std::map<int, double>* clampedPoints);
 	void updateProjM(std::map<int, double>* clampedPoints);
+
+	void getMuLambda(double x)
+	{
+
+	}
 
 	// Implement potential computation
 	double computeEnergy(Eigen::VectorXd q);
@@ -89,8 +91,6 @@ public:
 	std::vector<int> indexInvMap_;
 
 	Eigen::VectorXd massVec_;
-	double mu_;
-	double lambda_;
 
 	std::map<int, double> clampedPos_;
 };

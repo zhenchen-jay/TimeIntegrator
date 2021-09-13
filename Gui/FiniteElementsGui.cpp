@@ -63,6 +63,78 @@ void FiniteElementsGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu& menu)
             reset();
         }
     }
+	if (ImGui::CollapsingHeader("Material Options", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		if (ImGui::Combo("Material", (int*)&params_.materialType, "Linear\0NeoHookean\0\0"))
+		{
+			updateParams();
+			reset();
+		}
+		if (ImGui::Combo("Youngs Type", (int*)&params_.youngsType, "Constant\0Linear\0Random\0\0"))
+		{
+			switch (params_.youngsType)
+			{
+			case SimParameters::YT_CONSTANT:
+				params_.youngsList.resize(params_.numSegs, params_.youngs);
+				break;
+			case SimParameters::YT_LINEAR:
+				params_.youngsList.resize(params_.numSegs, params_.youngs);
+				for (int i = 0; i < params_.numSegs; i++)
+				{
+					double curYoungs = 0.2 * params_.youngs + i * 0.8 / (params_.numSegs - 1) * params_.youngs;
+					params_.youngsList[i] = curYoungs;
+				}
+				break;
+			case SimParameters::YT_RANDOM:
+				params_.youngsList.resize(params_.numSegs, params_.youngs);
+				for (int i = 0; i < params_.numSegs; i++)
+				{
+					double randVal = std::rand() * 1.0 / RAND_MAX;
+					double randYoungs = (0.2 + (1.0 - 0.2) * randVal) * params_.youngs;
+					params_.youngsList[i] = randYoungs;
+					std::cout << "seg id: " << i << ", youngs: " << randYoungs << std::endl;
+				}
+				break;
+			default:
+				params_.youngsList.resize(params_.numSegs, params_.youngs);
+				break;
+			}
+			updateParams();
+			reset();
+		}
+		if (ImGui::InputDouble("Max Youngs Modulus", &params_.youngs))
+		{
+			switch (params_.youngsType)
+			{
+			case SimParameters::YT_CONSTANT:
+				params_.youngsList.resize(params_.numSegs, params_.youngs);
+				break;
+			case SimParameters::YT_LINEAR:
+				params_.youngsList.resize(params_.numSegs, params_.youngs);
+				for (int i = 0; i < params_.numSegs; i++)
+				{
+					double curYoungs = 0.2 * params_.youngs + i * 0.8 / (params_.numSegs - 1) * params_.youngs;
+					params_.youngsList[i] = curYoungs;
+				}
+				break;
+			case SimParameters::YT_RANDOM:
+				params_.youngsList.resize(params_.numSegs, params_.youngs);
+				for (int i = 0; i < params_.numSegs; i++)
+				{
+					double randVal = std::rand() * 1.0 / RAND_MAX;
+					double randYoungs = (0.2 + (1.0 - 0.2) * randVal) * params_.youngs;
+					params_.youngsList[i] = randYoungs;
+					std::cout << "seg id: " << i << ", youngs: " << randYoungs << std::endl;
+				}
+				break;
+			default:
+				params_.youngsList.resize(params_.numSegs, params_.youngs);
+				break;
+			}
+			updateParams();
+			reset();
+		}
+	}
 	if (ImGui::CollapsingHeader("Simulation Options", ImGuiTreeNodeFlags_DefaultOpen))
 	{
 		if (ImGui::InputDouble("Timestep", &params_.timeStep))
@@ -73,11 +145,6 @@ void FiniteElementsGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu& menu)
 		    reset();
 		}
 		if (ImGui::InputInt("Number of Segments", &params_.numSegs))
-		{
-		    updateParams();
-		    reset();
-		}
-		if (ImGui::Combo("Material", (int*)&params_.materialType, "Linear\0NeoHookean\0\0"))
 		{
 		    updateParams();
 		    reset();
@@ -337,6 +404,19 @@ void FiniteElementsGui::getOutputFolderPath()
 		outputFolderPath_ = baseFolder_ + "Pogo_Stick/" + std::to_string(params_.timeStep) + "_" + std::to_string(params_.barrierStiffness) + "_numSeg_" + std::to_string(params_.numSegs) + "/";
 	}
 
+	switch (params_.youngsType)
+	{
+	case SimParameters::YT_CONSTANT:
+		outputFolderPath_ = outputFolderPath_ + "/ConstantYoungs/";
+		break;
+	case SimParameters::YT_LINEAR:
+		outputFolderPath_ = outputFolderPath_ + "/LinearYoungs/";
+		break;
+	case SimParameters::YT_RANDOM:
+		outputFolderPath_ = outputFolderPath_ + "/RandomYoungs/";
+		break;
+	}
+
 	if (params_.materialType == SimParameters::MT_LINEAR)
 		outputFolderPath_ = outputFolderPath_ + "Linear/";
 	else
@@ -404,8 +484,6 @@ void FiniteElementsGui::initSimulation()
 	{
 		isTheoretical_ = true;
 	}
-
-
     switch (params_.materialType)
     {
         case SimParameters::MT_LINEAR:

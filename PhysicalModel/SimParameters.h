@@ -2,6 +2,7 @@
 #define SIMPARAMETERS_H
 
 #include <cmath>
+#include <vector>
 
 struct SimParameters
 {
@@ -51,12 +52,15 @@ struct SimParameters
 
         numSpectra = 10;
         isSaveInfo = true;
-
+        
+        youngsType = YT_CONSTANT;
+        youngsList.resize(youngs, youngs);
     }
 
     enum TimeIntegrator {TI_EXPLICIT_EULER, TI_VELOCITY_VERLET, TI_RUNGE_KUTTA, TI_EXP_ROSENBROCK_EULER, TI_IMPLICIT_EULER, TI_IMPLICIT_MIDPOINT, TI_TRAPEZOID, TI_TR_BDF2, TI_BDF2, TI_NEWMARK};
     enum ModelType {MT_HARMONIC_1D, MT_POGO_STICK};
     enum MaterialType {MT_LINEAR, MT_NEOHOOKEAN};
+    enum YoungsType {YT_CONSTANT, YT_LINEAR, YT_RANDOM};
 
     double timeStep;
     TimeIntegrator integrator;
@@ -87,6 +91,7 @@ struct SimParameters
 
     ModelType modelType;
     MaterialType materialType;
+    YoungsType youngsType;
 
     double totalTime;   // total simulation time
     int totalNumIter;   // total simulation steps
@@ -94,6 +99,7 @@ struct SimParameters
     int numSegs;    // number of segments
 
     double youngs;
+    std::vector<double> youngsList;
     double poisson;
 
     bool elasticEnabled;
