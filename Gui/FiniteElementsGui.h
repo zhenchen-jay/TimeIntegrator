@@ -81,6 +81,9 @@ private:
 	Eigen::VectorXd curQTheo_;
 	Eigen::VectorXd curVelTheo_;
 
+	Eigen::VectorXd curQExact_;
+	Eigen::VectorXd curVelExact_;
+
 	Eigen::VectorXd preQ_;
 	Eigen::VectorXd preVel_;
 
@@ -89,6 +92,7 @@ private:
 
 	Eigen::VectorXd curPos_;
 	Eigen::VectorXd curPosTheo_;
+	Eigen::VectorXd exactPos_;
 	Eigen::MatrixXi curF_;
 
 	Eigen::MatrixXd renderQ;

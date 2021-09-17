@@ -23,6 +23,9 @@ public:
 	void updateAlphasBetas();
 	
 	void getCurPosVel(Eigen::VectorXd &pos, Eigen::VectorXd &vel);
+	void getTheoPosVel(Eigen::VectorXd& pos, Eigen::VectorXd& vel);
+
+	void saveInfo(std::string outputFolder);
 
 
 public:
@@ -32,6 +35,8 @@ public:
 	int numSpectras_;
 	std::vector<Eigen::Vector2d> curAlphaBeta_;
 	std::vector<Eigen::Vector2d> preAlphaBeta_;
+	std::vector<Eigen::Vector2d> initialAlphaBeta_;
+	std::vector<Eigen::Vector2d> curAlphaBetaTheo_;
 
 	std::vector<double> cis_;
 	Eigen::MatrixXd eigenVecs_;

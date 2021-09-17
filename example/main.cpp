@@ -152,8 +152,8 @@ int main(int argc, char* argv[])
 {
 	Eigen::MatrixXd V;
 	Eigen::MatrixXi F;
-	igl::readOBJ("E:/twistedAnnulus/StVK/70k/annulus_convergence/stvk/stvk_171.obj", V, F);
-	std::cout << V.col(2).maxCoeff() << std::endl;
+	/*igl::readOBJ("E:/WTF_dataset/flat_geometry/shearing-new/fullsim/20kverts/shearing_simulated.obj", V, F);
+	std::cout << V.col(2).maxCoeff() << std::endl;*/
 	bool offlineSimulation = false;
 	std::cout << argc << std::endl;
 	if (argc >= 2)
@@ -272,7 +272,7 @@ int main(int argc, char* argv[])
 
 		menu.callback_draw_viewer_menu = [&]()
 		{
-			if (ImGui::CollapsingHeader("Simulation Control", ImGuiTreeNodeFlags_DefaultOpen))
+			/*if (ImGui::CollapsingHeader("Simulation Control", ImGuiTreeNodeFlags_DefaultOpen))
 			{
 				if (ImGui::Button("Run Sim", ImVec2(-1, 0)))
 				{
@@ -288,11 +288,18 @@ int main(int argc, char* argv[])
 			    hook->drawGUI(menu);
 			else
 			    FEM->drawGUI(menu);
-			return false;
+			return false;*/
 		};
 
-		/*menu.callback_draw_custom_window = [&]()
+		menu.callback_draw_custom_window = [&]()
 		{
+			//ImGui::SetNextWindowPos(ImVec2(180.f * menu.menu_scaling(), 10), ImGuiCond_FirstUseEver);
+			ImGui::SetNextWindowPos(ImVec2(0, 10), ImGuiCond_FirstUseEver);
+			ImGui::SetNextWindowSize(ImVec2(0.0, 0.0), ImGuiCond_FirstUseEver);
+			ImGui::Begin(
+				"Simulation", nullptr,
+				ImGuiWindowFlags_NoSavedSettings
+			);
 			if (ImGui::CollapsingHeader("Simulation Control", ImGuiTreeNodeFlags_DefaultOpen))
 			{
 				if (ImGui::Button("Run Sim", ImVec2(-1, 0)))
@@ -309,8 +316,9 @@ int main(int argc, char* argv[])
 				hook->drawGUI(menu);
 			else
 				FEM->drawGUI(menu);
-			return false;
-		};*/
+			/*return false;*/
+			ImGui::End();
+		};
 
 		viewer.launch();
 	}

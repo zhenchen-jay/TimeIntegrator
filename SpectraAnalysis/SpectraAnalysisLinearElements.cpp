@@ -1,5 +1,7 @@
 #include <iostream>
+#include <filesystem>
 #include <Eigen/Eigenvalues>
+#include <fstream>
 #include "SpectraAnalysisLinearElements.h"
 
 SpectraAnalysisLinearElements::SpectraAnalysisLinearElements(const SimParameters& params, Eigen::VectorXd& q0, Eigen::VectorXd& v0, const LinearElements& model)
@@ -133,13 +135,17 @@ void SpectraAnalysisLinearElements::initialization()
 	// compute initial alphas and betas
 	curAlphaBeta_.resize(numSpectras_);
 	preAlphaBeta_.resize(numSpectras_);
+	initialAlphaBeta_.resize(numSpectras_);
+	curAlphaBetaTheo_.resize(numSpectras_);
 
 	for (int i = 0; i < numSpectras_; i++)
 	{
 		double alpha = eigenVecs_.col(i).dot(massMat_ * q0_);
 		double beta = eigenVecs_.col(i).dot(massMat_ * v0_);
-		curAlphaBeta_[i] << alpha, beta;
-		preAlphaBeta_[i] = curAlphaBeta_[i];
+		initialAlphaBeta_[i] << alpha, beta;
+		preAlphaBeta_[i] = initialAlphaBeta_[i];
+		curAlphaBeta_[i] = initialAlphaBeta_[i];
+		curAlphaBetaTheo_[i] = initialAlphaBeta_[i];
 	}
 
 	// compute the constant part
@@ -255,6 +261,13 @@ void SpectraAnalysisLinearElements::updateAlphasBetas()
 		}
 	}
 	curTime_ += h;
+
+	// compute the theoretical alpha beta
+	for (int i = 0; i < numSpectras_; i++)
+	{
+		curAlphaBetaTheo_[i](0) = (initialAlphaBeta_[i](0) + cis_[i] / eigenValues_[i]) * std::cos(std::sqrt(eigenValues_[i]) * curTime_) - cis_[i] / eigenValues_[i];
+		curAlphaBetaTheo_[i](1) = (initialAlphaBeta_[i](0) + cis_[i] / eigenValues_[i]) * std::sin(std::sqrt(eigenValues_[i]) * curTime_) * std::sqrt(eigenValues_[i]);
+	}
 }
 
 void SpectraAnalysisLinearElements::getCurPosVel(Eigen::VectorXd& pos, Eigen::VectorXd& vel)
@@ -272,5 +285,71 @@ void SpectraAnalysisLinearElements::getCurPosVel(Eigen::VectorXd& pos, Eigen::Ve
 	{
 		pos += curAlphaBeta_[i](0) * eigenVecs_.col(i);
 		vel += curAlphaBeta_[i](1) * eigenVecs_.col(i);
+	}
+}
+
+void SpectraAnalysisLinearElements::getTheoPosVel(Eigen::VectorXd& pos, Eigen::VectorXd& vel)
+{
+	if (curAlphaBetaTheo_.size() != numSpectras_)
+	{
+		std::cerr << "mismatch in alpha beta vector size and number of spectras." << std::endl;
+		exit(1);
+	}
+
+	pos.setZero(eigenVecs_.rows());
+	vel.setZero(eigenVecs_.rows());
+
+	for (int i = 0; i < numSpectras_; i++)
+	{
+		pos += curAlphaBetaTheo_[i](0) * eigenVecs_.col(i);
+		vel += curAlphaBetaTheo_[i](1) * eigenVecs_.col(i);
+	}
+}
+
+
+void SpectraAnalysisLinearElements::saveInfo(std::string outputFolder)
+{
+	if (!std::filesystem::exists(outputFolder))
+	{
+		std::cout << "create directory: " << outputFolder << std::endl;
+		if (!std::filesystem::create_directories(outputFolder))
+		{
+			std::cout << "create folder failed." << outputFolder << std::endl;
+			exit(1);
+		}
+	}
+
+	for (int i = 0; i < numSpectras_; i++)
+	{
+		std::string alphafileName = outputFolder + "alpha_" + std::to_string(i) + ".txt";
+		std::string theoAlphafileName = outputFolder + "alpha_theo_" + std::to_string(i) + ".txt";
+
+		std::string betafileName = outputFolder + "beta_" + std::to_string(i) + ".txt";
+		std::string theoBetafileName = outputFolder + "beta_theo_" + std::to_string(i) + ".txt";
+
+		std::ofstream afs, atfs, bfs, btfs;
+
+		if (curTime_ == 0)
+		{
+			afs.open(alphafileName, std::ofstream::out);
+			atfs.open(theoAlphafileName, std::ofstream::out);
+
+			bfs.open(betafileName, std::ofstream::out);
+			btfs.open(theoBetafileName, std::ofstream::out);
+		}
+		else
+		{
+			afs.open(alphafileName, std::ofstream::out | std::ofstream::app);
+			atfs.open(theoAlphafileName, std::ofstream::out | std::ofstream::app);
+
+			bfs.open(betafileName, std::ofstream::out | std::ofstream::app);
+			btfs.open(theoBetafileName, std::ofstream::out | std::ofstream::app);
+		}
+
+		afs << curAlphaBeta_[i](0) << std::endl;
+		atfs << curAlphaBetaTheo_[i](0) << std::endl;
+
+		bfs << curAlphaBeta_[i](1) << std::endl;
+		btfs << curAlphaBetaTheo_[i](1) << std::endl;
 	}
 }

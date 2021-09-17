@@ -334,6 +334,27 @@ void FiniteElementsGui::updateRenderGeometry()
 			}
 			idx += 2;
 		}
+
+		for (int i = 0; i < exactPos_.size(); i++)
+		{
+			verts.push_back(Eigen::Vector3d(0.05 * params_.topLine, exactPos_(i), 0));
+			verts.push_back(Eigen::Vector3d(0.07 * params_.topLine, exactPos_(i), 0));
+
+			Eigen::RowVector3d color;
+
+			igl::colormap(igl::COLOR_MAP_TYPE_VIRIDIS, 6.0 / 9.0, color.data());
+
+			//color << 255, 175, 255;
+			vertsColors.push_back(color);
+			vertsColors.push_back(color);
+
+			if (i != exactPos_.size() - 1)
+			{
+				faces.push_back(Eigen::Vector3i(idx + 1, idx, idx + 3));
+				faces.push_back(Eigen::Vector3i(idx + 3, idx, idx + 2));
+			}
+			idx += 2;
+		}
 	}
 	
 
@@ -353,7 +374,7 @@ void FiniteElementsGui::updateRenderGeometry()
 	}
 
 	if (isTheoretical_)
-		edgeStart.setZero(2 * (curPos_.size() * 3 - 2), 3);
+		edgeStart.setZero(3 * (curPos_.size() * 3 - 2), 3);
 	else
 		edgeStart.setZero(curPos_.size() * 3 - 2, 3);
 	edgeEnd = edgeStart;
@@ -387,6 +408,21 @@ void FiniteElementsGui::updateRenderGeometry()
 
 				edgeStart.row(2 * i + curPos_.size() + 1 + curPos_.size() * 3 - 2) = Eigen::Vector3d(0.03 * params_.topLine, curPosTheo_(i), 0);
 				edgeEnd.row(2 * i + curPos_.size() + 1 + curPos_.size() * 3 - 2) = Eigen::Vector3d(0.03 * params_.topLine, curPosTheo_(i + 1), 0);
+			}
+		}
+
+		for (int i = 0; i < exactPos_.size(); i++)
+		{
+			edgeStart.row(i + 2 * (exactPos_.size() * 3 - 2)) = Eigen::Vector3d(0.05 * params_.topLine, exactPos_(i), 0);
+			edgeEnd.row(i + 2 * (exactPos_.size() * 3 - 2)) = Eigen::Vector3d(0.07 * params_.topLine, exactPos_(i), 0);
+
+			if (i < exactPos_.size() - 1)
+			{
+				edgeStart.row(2 * i + exactPos_.size() + 2 * (exactPos_.size() * 3 - 2)) = Eigen::Vector3d(0.05 * params_.topLine, exactPos_(i), 0);
+				edgeEnd.row(2 * i + exactPos_.size() + 2 * (exactPos_.size() * 3 - 2)) = Eigen::Vector3d(0.05 * params_.topLine, exactPos_(i + 1), 0);
+
+				edgeStart.row(2 * i + exactPos_.size() + 1 + 2 * (exactPos_.size() * 3 - 2)) = Eigen::Vector3d(0.07 * params_.topLine, exactPos_(i), 0);
+				edgeEnd.row(2 * i + exactPos_.size() + 1 + 2 * (exactPos_.size() * 3 - 2)) = Eigen::Vector3d(0.07 * params_.topLine, exactPos_(i + 1), 0);
 			}
 		}
 	}
@@ -484,6 +520,9 @@ void FiniteElementsGui::initSimulation()
 	{
 		isTheoretical_ = true;
 	}
+	else
+		isTheoretical_ = false;
+
     switch (params_.materialType)
     {
         case SimParameters::MT_LINEAR:
@@ -557,6 +596,10 @@ void FiniteElementsGui::initSimulation()
 
 		curPosTheo_ = curPos_;
 
+		curQExact_ = curQ_;
+		curVelExact_ = curVel_;
+		exactPos_ = curPos_;
+
 		theoModel_ = SpectraAnalysisLinearElements(params_, curQTheo_, curVelTheo_, *(static_cast<LinearElements*>(model_.get())));
 	}
 }
@@ -573,6 +616,9 @@ bool FiniteElementsGui::simulateOneStep()
 		theoModel_.updateAlphasBetas();
 		theoModel_.getCurPosVel(curQTheo_, curVelTheo_);
 		model_->convertVar2Pos(curQTheo_, curPosTheo_);
+
+		theoModel_.getTheoPosVel(curQExact_, curVelExact_);
+		model_->convertVar2Pos(curQExact_, exactPos_);
 	}
 
 	Eigen::VectorXd posNew, velNew;
@@ -733,6 +779,11 @@ bool FiniteElementsGui::simulateOneStep()
 
 void FiniteElementsGui::saveInfo()
 {
+	if (isTheoretical_)
+	{
+		theoModel_.saveInfo(outputFolderPath_);
+	}
+
 	std::string statFileName = outputFolderPath_ + std::string("simulation_status.txt");
 	std::ofstream sfs;
 
@@ -767,9 +818,10 @@ void FiniteElementsGui::saveInfo()
 	if (isTheoretical_)
 	{
 		double theoBot = curQTheo_.minCoeff();
+		double exactBot = curQExact_.minCoeff();
 		if (params_.isSaveInfo)
 			sfs << " " << theoBot << std::endl;
-		std::cout << ", theoretical bottom: " << theoBot << ", error: " << theoBot - bottom << std::endl;
+		std::cout << ", theoretical bottom: " << theoBot << ", exact bottom: " << exactBot << std::endl;
 	}
 	if (params_.isSaveInfo)
 		sfs << std::endl;
