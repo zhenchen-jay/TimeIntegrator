@@ -1,7 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import os
 
-filePathPrefix = 'C:/Users/csyzz/Projects/TimeIntegrator/build/output/Harmonic1d/'
+filePathPrefix = '/home/zchen96/Projects/TimeIntegrator/build_clion/output/Harmonic1d/'
 timeStepTypes = ['0.005000']
 timeStepLabels = ['5e-3']
 stiffnessTypes = ['1.000000']
@@ -36,13 +37,26 @@ for i in range(len(alphaList[0][0])):
 for i in range(len(integratorTypes)):
     for j in range(len(lambdaList)):
         eval = lambdaList[j]
+        folderPath = filePathPrefix + timeStepTypes[0] + '_' + stiffnessTypes[0] + '_numSeg_10' + '/ConstantYoungs/'+ materialTypes[0] + '/SpectraAnalysis/'
+        checkFolder = os.path.isdir(folderPath)
+        if not checkFolder:
+            os.makedirs(folderPath)
         plt.figure(dpi=300)
         plt.xlabel('t/s')
-        plt.ylabel('alpha')
+        plt.ylabel('alpha (consant Youngs and ' + materialTypes[0]+' material')
         startId = 3000
         endID = 3100
-        plt.plot(time[startId:endID], alphaList[i][j][startId:endID], linewidth=0.5, label = 'constant Youngs' + '_' + materialTypes[0] + '_' + integratorTypes[i] + '-h=' + timeStepLabels[0] +'_' + eval)
-        plt.plot(time[startId:endID], alphaTheoList[i][j][startId:endID], linewidth=0.5, label = 'constant Youngs' + '_' + materialTypes[0] + '_' + integratorTypes[i] + '-h=' + timeStepLabels[0] +'_' + eval + '_theoretical')
+        plt.plot(time[startId:endID], alphaList[i][j][startId:endID], linewidth=0.5, label = integratorTypes[i] + '-h=' + timeStepLabels[0] +'_' + eval)
+        plt.plot(time[startId:endID], alphaTheoList[i][j][startId:endID], linewidth=0.5, label = integratorTypes[i] + '-h=' + timeStepLabels[0] +'_' + eval + '_theoretical')
         plt.legend()
-        imgPath = filePathPrefix + timeStepTypes[0] + '_' + stiffnessTypes[0] + '_numSeg_10' + '/bottomDis/' + 'constantYoungs_' + materialTypes[0] + '_' + integratorTypes[i] + '_' + eval + '_alphaDiff_zoomIn' + '.png'
+        imgPath = folderPath + integratorTypes[i] + '_' + eval + '_alphaDiff_zoomIn' + '.png'
+        plt.savefig(imgPath)
+
+        plt.figure(dpi=300)
+        plt.xlabel('t/s')
+        plt.ylabel('alpha (consant Youngs and ' + materialTypes[0]+' material')
+        plt.plot(time, alphaList[i][j], linewidth=0.5, label = integratorTypes[i] + '-h=' + timeStepLabels[0] +'_' + eval)
+        plt.plot(time, alphaTheoList[i][j], linewidth=0.5, label = integratorTypes[i] + '-h=' + timeStepLabels[0] +'_' + eval + '_theoretical')
+        plt.legend()
+        imgPath = folderPath + integratorTypes[i] + '_' + eval + '_alphaDiff' + '.png'
         plt.savefig(imgPath)
