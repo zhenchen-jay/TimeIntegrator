@@ -38,7 +38,7 @@ struct SimParameters
         NM_beta = 0.25;
 
         modelType = MT_HARMONIC_1D;
-        materialType = MT_LINEAR;
+        materialType = MT_StVK;
         barrierStiffness = 1;
         barrierEps = 0.01;
 
@@ -59,7 +59,7 @@ struct SimParameters
 
     enum TimeIntegrator {TI_EXPLICIT_EULER, TI_VELOCITY_VERLET, TI_RUNGE_KUTTA, TI_EXP_ROSENBROCK_EULER, TI_IMPLICIT_EULER, TI_IMPLICIT_MIDPOINT, TI_TRAPEZOID, TI_TR_BDF2, TI_BDF2, TI_NEWMARK};
     enum ModelType {MT_HARMONIC_1D, MT_POGO_STICK};
-    enum MaterialType {MT_LINEAR, MT_NEOHOOKEAN};
+    enum MaterialType {MT_LINEAR, MT_StVK, MT_NEOHOOKEAN};
     enum YoungsType {YT_CONSTANT, YT_LINEAR, YT_RANDOM};
 
     double timeStep;

@@ -65,7 +65,7 @@ void FiniteElementsGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu& menu)
     }
 	if (ImGui::CollapsingHeader("Material Options", ImGuiTreeNodeFlags_DefaultOpen))
 	{
-		if (ImGui::Combo("Material", (int*)&params_.materialType, "Linear\0NeoHookean\0\0"))
+		if (ImGui::Combo("Material", (int*)&params_.materialType, "Linear\0StVK\0NeoHookean\0\0"))
 		{
 			updateParams();
 			reset();
@@ -211,7 +211,7 @@ void FiniteElementsGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu& menu)
 
 	if (ImGui::Button("Test Gradient and Hessian", ImVec2(-1, 0)))
 	{
-		std::cout << "test floor barrier: " << std::endl;
+		/*std::cout << "test floor barrier: " << std::endl;
 		std::cout << "f-g: " << std::endl;
 		model_->testFloorBarrierEnergy(curQ_);
 
@@ -222,14 +222,16 @@ void FiniteElementsGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu& menu)
 		std::cout << "f-g: " << std::endl;
 		model_->testInternalBarrierEnergy(curQ_);
 		std::cout << "g-h: " << std::endl;
-		model_->testInternalBarrierGradient(curQ_);
+		model_->testInternalBarrierGradient(curQ_);*/
 
-		std::cout << "test Elastic potential: " << std::endl;
+		/*std::cout << "test Elastic potential: " << std::endl;
+		std::cout << "f-g: " << std::endl;
 		model_->testElasticEnergy(curQ_);
-		model_->testElasticGradient(curQ_);
+		std::cout << "g-h: " << std::endl;
+		model_->testElasticGradient(curQ_);*/
 		//
-		model_->testPotentialDifferential(curQ_);
-		model_->testGradientDifferential(curQ_);
+		model_->testPotentialDifferentialPerface(curQ_, 1);
+		model_->testGradientDifferentialPerface(curQ_, 1);
 	}
 
 }
@@ -453,11 +455,19 @@ void FiniteElementsGui::getOutputFolderPath()
 		break;
 	}
 
-	if (params_.materialType == SimParameters::MT_LINEAR)
+	switch (params_.materialType)
+	{
+	case SimParameters::MT_LINEAR:
 		outputFolderPath_ = outputFolderPath_ + "Linear/";
-	else
+		break;
+	case SimParameters::MT_StVK:
+		outputFolderPath_ = outputFolderPath_ + "StVK/";
+		break;
+	case SimParameters::MT_NEOHOOKEAN:
 		outputFolderPath_ = outputFolderPath_ + "NeoHookean/";
-
+		break;
+	}
+	
 	switch (params_.integrator)
 	{
 	case SimParameters::TI_EXPLICIT_EULER:
@@ -528,6 +538,9 @@ void FiniteElementsGui::initSimulation()
         case SimParameters::MT_LINEAR:
             model_ = std::make_shared<LinearElements>(params_);
             break;
+		case SimParameters::MT_StVK:
+			model_ = std::make_shared<StVK>(params_);
+			break;
         case SimParameters::MT_NEOHOOKEAN:
             model_ = std::make_shared<NeoHookean>(params_);
     }
@@ -631,96 +644,145 @@ bool FiniteElementsGui::simulateOneStep()
 	        TimeIntegrator::explicitEuler<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew);
 	    }
 
+		else if (params_.materialType == SimParameters::MT_StVK)
+		{
+			std::cout << "model type: StVK. Time integration: Explicit Euler." << std::endl;
+			TimeIntegrator::explicitEuler<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew);
+		}
+
 	    else if(params_.materialType == SimParameters::MT_NEOHOOKEAN)
 	    {
 	        std::cout << "model type: NeoHookean. Time integration: Explicit Euler." << std::endl;
 	        TimeIntegrator::explicitEuler<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
 	    }
 		break;
+
 	case SimParameters::TI_RUNGE_KUTTA:
 	    if(params_.materialType == SimParameters::MT_LINEAR)
 	    {
 	        std::cout << "model type: Linear Elasticity. Time integration: RK4." << std::endl;
 	        TimeIntegrator::RoungeKutta4<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew);
 	    }
+		else if (params_.materialType == SimParameters::MT_StVK)
+		{
+			std::cout << "model type: StVK. Time integration: RK4." << std::endl;
+			TimeIntegrator::RoungeKutta4<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew);
+		}
 	    else if(params_.materialType == SimParameters::MT_NEOHOOKEAN)
 	    {
 	        std::cout << "model type: NoeHookean. Time integration: RK4." << std::endl;
 	        TimeIntegrator::RoungeKutta4<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
 	    }
 		break;
+
 	case SimParameters::TI_VELOCITY_VERLET:
 	    if(params_.materialType == SimParameters::MT_LINEAR)
 	    {
 	        std::cout << "model type: Linear Elasticity. Time integration: Velocity Verlet." << std::endl;
 	        TimeIntegrator::velocityVerlet<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew);
 	    }
+		else if (params_.materialType == SimParameters::MT_StVK)
+		{
+			std::cout << "model type: StVK. Time integration: Velocity Verlet." << std::endl;
+			TimeIntegrator::velocityVerlet<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew);
+		}
 	    else if(params_.materialType == SimParameters::MT_NEOHOOKEAN)
 	    {
 	        std::cout << "model type: NeoHookean. Time integration: Velocity Verlet." << std::endl;
 	        TimeIntegrator::velocityVerlet<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
 	    }
 		break;
+
 	case SimParameters::TI_EXP_ROSENBROCK_EULER:
 	    if(params_.materialType == SimParameters::MT_LINEAR)
 	    {
 	        std::cout << "model type: Linear Elasticity. Time integration: Exp Euler." << std::endl;
 	        TimeIntegrator::exponentialRosenBrockEuler<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew);
 	    }
+		else if (params_.materialType == SimParameters::MT_StVK)
+		{
+			std::cout << "model type: StVK. Time integration: Exp Euler." << std::endl;
+			TimeIntegrator::exponentialRosenBrockEuler<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew);
+		}
 	    else if(params_.materialType == SimParameters::MT_NEOHOOKEAN)
 	    {
 	        std::cout << "model type: NeoHookean. Time integration: Exp Euler." << std::endl;
 	        TimeIntegrator::exponentialRosenBrockEuler<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
 	    }
 		break;
+
 	case SimParameters::TI_IMPLICIT_EULER:
 	    if(params_.materialType == SimParameters::MT_LINEAR)
 	    {
 	        std::cout << "model type: Linear Elasticity. Time integration: Implicit Euler." << std::endl;
 	        TimeIntegrator::implicitEuler<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew);
 	    }
+		else if (params_.materialType == SimParameters::MT_StVK)
+		{
+			std::cout << "model type: StVK. Time integration: Implicit Euler." << std::endl;
+			TimeIntegrator::implicitEuler<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew);
+		}
 	    else if(params_.materialType == SimParameters::MT_NEOHOOKEAN)
 	    {
 	        std::cout << "model type: NeoHookean. Time integration: Implicit Euler." << std::endl;
 	        TimeIntegrator::implicitEuler<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
 	    }
 		break;
+
 	case SimParameters::TI_IMPLICIT_MIDPOINT:
 	    if(params_.materialType == SimParameters::MT_LINEAR)
 	    {
 	        std::cout << "model type: Linear Elasticity. Time integration: Midpoint." << std::endl;
 	        TimeIntegrator::implicitMidPoint<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew);
 	    }
+		else if (params_.materialType == SimParameters::MT_StVK)
+		{
+			std::cout << "model type: StVK. Time integration: Midpoint." << std::endl;
+			TimeIntegrator::implicitMidPoint<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew);
+		}
 	    else if(params_.materialType == SimParameters::MT_NEOHOOKEAN)
 	    {
 	        std::cout << "model type: NeoHookean. Time integration: Midpoint." << std::endl;
 	        TimeIntegrator::implicitMidPoint<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
 	    }
 		break;
+
 	case SimParameters::TI_TRAPEZOID:
 	    if(params_.materialType == SimParameters::MT_LINEAR)
 	    {
 	        std::cout << "model type: Linear Elasticity. Time integration: Trapezoid." << std::endl;
 	        TimeIntegrator::trapezoid<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew);
 	    }
+		else if (params_.materialType == SimParameters::MT_StVK)
+		{
+			std::cout << "model type: StVK. Time integration: Trapezoid." << std::endl;
+			TimeIntegrator::trapezoid<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew);
+		}
 	    else if(params_.materialType == SimParameters::MT_NEOHOOKEAN)
 	    {
 	        std::cout << "model type: NeoHookean. Time integration: Trapezoid." << std::endl;
 	        TimeIntegrator::trapezoid<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
 	    }
 		break;
+
 	case SimParameters::TI_TR_BDF2:
 	    if(params_.materialType == SimParameters::MT_LINEAR)
 	    {
 	        std::cout << "model type: Linear Elasticity. Time integration: TRBDF2." << std::endl;
 	        TimeIntegrator::trapezoidBDF2<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew, params_.TRBDF2_gamma);
 	    }
+		else if (params_.materialType == SimParameters::MT_StVK)
+		{
+			std::cout << "model type: StVK. Time integration: TRBDF2." << std::endl;
+			TimeIntegrator::trapezoidBDF2<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew);
+		}
 	    else if(params_.materialType == SimParameters::MT_NEOHOOKEAN)
 	    {
 	        std::cout << "model type: NeoHookean. Time integration: TRBDF2." << std::endl;
 	        TimeIntegrator::trapezoidBDF2<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
 	    }
 		break;
+
 	case SimParameters::TI_BDF2:
 		if (time_ == 0)
 		{
@@ -729,6 +791,11 @@ bool FiniteElementsGui::simulateOneStep()
 		        std::cout << "model type: Linear Elasticity. Time integration: BDF2." << std::endl;
 		        TimeIntegrator::implicitEuler<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew);
 		    }
+			else if (params_.materialType == SimParameters::MT_StVK)
+			{
+				std::cout << "model type: StVK. Time integration: BDF2." << std::endl;
+				TimeIntegrator::implicitEuler<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew);
+			}
 		    else if(params_.materialType == SimParameters::MT_NEOHOOKEAN)
 		    {
 		        std::cout << "model type: NeoHookean. Time integration: BDF2." << std::endl;
@@ -743,6 +810,11 @@ bool FiniteElementsGui::simulateOneStep()
 		        std::cout << "model type: Linear Elasticity. Time integration: BDF2." << std::endl;
 		        TimeIntegrator::BDF2<LinearElements>(curQ_, curVel_, preQ_, preVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew);
 		    }
+			else if (params_.materialType == SimParameters::MT_StVK)
+			{
+				std::cout << "model type: StVK. Time integration: BDF2." << std::endl;
+				TimeIntegrator::BDF2<StVK>(curQ_, curVel_, preQ_, preVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew);
+			}
 		    else if(params_.materialType == SimParameters::MT_NEOHOOKEAN)
 		    {
 		        std::cout << "model type: NeoHookean. Time integration: BDF2." << std::endl;
@@ -751,12 +823,18 @@ bool FiniteElementsGui::simulateOneStep()
 		}
 
 		break;
+
 	case SimParameters::TI_NEWMARK:
 	    if(params_.materialType == SimParameters::MT_LINEAR)
 	    {
 	        std::cout << "model type: Linear Elasticity. Time integration: Newmark." << std::endl;
 	        TimeIntegrator::Newmark<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew, params_.NM_gamma, params_.NM_beta);
 	    }
+		else if (params_.materialType == SimParameters::MT_StVK)
+		{
+			std::cout << "model type: StVK. Time integration: Newmark." << std::endl;
+			TimeIntegrator::Newmark<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew, params_.NM_gamma, params_.NM_beta);
+		}
 	    else if(params_.materialType == SimParameters::MT_NEOHOOKEAN)
 	    {
 	        std::cout << "model type: NeoHookean. Time integration: Newmark." << std::endl;

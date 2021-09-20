@@ -13,6 +13,7 @@
 
 #include "../PhysicalModel/PhysicalModel.h"
 #include "../PhysicalModel/LinearElements.h"
+#include "../PhysicalModel/StVK.h"
 #include "../PhysicalModel/NeoHookean.h"
 #include "../PhysicalModel/SimParameters.h"
 #include "../PhysicalModel/SceneObjects.h"
