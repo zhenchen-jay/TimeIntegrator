@@ -293,26 +293,26 @@ void FiniteElementsGui::updateRenderGeometry()
 	    idx += 6;*/
 	}
 
-	for (int i = 0; i < curPos_.size(); i++)
-	{
-	    verts.push_back(Eigen::Vector3d(-0.03 * params_.topLine, curPos_(i), 0));
-	    verts.push_back(Eigen::Vector3d(-0.01 * params_.topLine, curPos_(i), 0));
+	//for (int i = 0; i < curPos_.size(); i++)
+	//{
+	//    verts.push_back(Eigen::Vector3d(-0.03 * params_.topLine, curPos_(i), 0));
+	//    verts.push_back(Eigen::Vector3d(-0.01 * params_.topLine, curPos_(i), 0));
 
-		Eigen::RowVector3d color;
+	//	Eigen::RowVector3d color;
 
-		igl::colormap(igl::COLOR_MAP_TYPE_VIRIDIS, 2.0 / 9.0, color.data());
+	//	igl::colormap(igl::COLOR_MAP_TYPE_VIRIDIS, 2.0 / 9.0, color.data());
 
-		//color << 255, 175, 255;
-		vertsColors.push_back(color);
-		vertsColors.push_back(color);
+	//	//color << 255, 175, 255;
+	//	vertsColors.push_back(color);
+	//	vertsColors.push_back(color);
 
-		if (i != curPos_.size() - 1)
-		{
-			faces.push_back(Eigen::Vector3i(idx + 1, idx, idx + 3));
-			faces.push_back(Eigen::Vector3i(idx + 3, idx, idx + 2));
-		}
-		idx += 2;
-	}
+	//	if (i != curPos_.size() - 1)
+	//	{
+	//		faces.push_back(Eigen::Vector3i(idx + 1, idx, idx + 3));
+	//		faces.push_back(Eigen::Vector3i(idx + 3, idx, idx + 2));
+	//	}
+	//	idx += 2;
+	//}
 
 	if (isTheoretical_)
 	{
@@ -337,26 +337,26 @@ void FiniteElementsGui::updateRenderGeometry()
 			idx += 2;
 		}
 
-		for (int i = 0; i < exactPos_.size(); i++)
-		{
-			verts.push_back(Eigen::Vector3d(0.05 * params_.topLine, exactPos_(i), 0));
-			verts.push_back(Eigen::Vector3d(0.07 * params_.topLine, exactPos_(i), 0));
+		//for (int i = 0; i < exactPos_.size(); i++)
+		//{
+		//	verts.push_back(Eigen::Vector3d(0.05 * params_.topLine, exactPos_(i), 0));
+		//	verts.push_back(Eigen::Vector3d(0.07 * params_.topLine, exactPos_(i), 0));
 
-			Eigen::RowVector3d color;
+		//	Eigen::RowVector3d color;
 
-			igl::colormap(igl::COLOR_MAP_TYPE_VIRIDIS, 6.0 / 9.0, color.data());
+		//	igl::colormap(igl::COLOR_MAP_TYPE_VIRIDIS, 6.0 / 9.0, color.data());
 
-			//color << 255, 175, 255;
-			vertsColors.push_back(color);
-			vertsColors.push_back(color);
+		//	//color << 255, 175, 255;
+		//	vertsColors.push_back(color);
+		//	vertsColors.push_back(color);
 
-			if (i != exactPos_.size() - 1)
-			{
-				faces.push_back(Eigen::Vector3i(idx + 1, idx, idx + 3));
-				faces.push_back(Eigen::Vector3i(idx + 3, idx, idx + 2));
-			}
-			idx += 2;
-		}
+		//	if (i != exactPos_.size() - 1)
+		//	{
+		//		faces.push_back(Eigen::Vector3i(idx + 1, idx, idx + 3));
+		//		faces.push_back(Eigen::Vector3i(idx + 3, idx, idx + 2));
+		//	}
+		//	idx += 2;
+		//}
 	}
 	
 
@@ -375,13 +375,15 @@ void FiniteElementsGui::updateRenderGeometry()
 	    renderC.row(i) = vertsColors[i];
 	}
 
-	if (isTheoretical_)
-		edgeStart.setZero(3 * (curPos_.size() * 3 - 2), 3);
-	else
-		edgeStart.setZero(curPos_.size() * 3 - 2, 3);
+	//if (isTheoretical_)
+	//	edgeStart.setZero(3 * (curPos_.size() * 3 - 2), 3);
+	//else
+	//	edgeStart.setZero(curPos_.size() * 3 - 2, 3);
+	edgeStart.setZero(curPosTheo_.size() * 3 - 2, 3);
 	edgeEnd = edgeStart;
 
-	for(int i = 0; i < curPos_.size(); i++)
+	idx = 0;
+	/*for(int i = 0; i < curPos_.size(); i++)
 	{
 	    edgeStart.row(i) = Eigen::Vector3d(-0.03 * params_.topLine, curPos_(i), 0);
 	    edgeEnd.row(i) = Eigen::Vector3d(-0.01 * params_.topLine, curPos_(i), 0);
@@ -394,26 +396,26 @@ void FiniteElementsGui::updateRenderGeometry()
 		    edgeStart.row(2 * i + curPos_.size() + 1) = Eigen::Vector3d(-0.01 * params_.topLine, curPos_(i), 0);
 		    edgeEnd.row(2 * i + curPos_.size() + 1) = Eigen::Vector3d(-0.01 * params_.topLine, curPos_(i + 1), 0);
 		}
-	}
+	}*/
 
 	if (isTheoretical_)
 	{
 		for (int i = 0; i < curPosTheo_.size(); i++)
 		{
-			edgeStart.row(i + curPos_.size() * 3 - 2) = Eigen::Vector3d(0.01 * params_.topLine, curPosTheo_(i), 0);
-			edgeEnd.row(i + curPos_.size() * 3 - 2) = Eigen::Vector3d(0.03 * params_.topLine, curPosTheo_(i), 0);
+			edgeStart.row(i + idx) = Eigen::Vector3d(0.01 * params_.topLine, curPosTheo_(i), 0);
+			edgeEnd.row(i + idx) = Eigen::Vector3d(0.03 * params_.topLine, curPosTheo_(i), 0);
 
-			if (i < curPos_.size() - 1)
+			if (i < curPosTheo_.size() - 1)
 			{
-				edgeStart.row(2 * i + curPos_.size() + curPos_.size() * 3 - 2) = Eigen::Vector3d(0.01 * params_.topLine, curPosTheo_(i), 0);
-				edgeEnd.row(2 * i + curPos_.size() + curPos_.size() * 3 - 2) = Eigen::Vector3d(0.01 * params_.topLine, curPosTheo_(i + 1), 0);
+				edgeStart.row(2 * i + curPosTheo_.size() + idx) = Eigen::Vector3d(0.01 * params_.topLine, curPosTheo_(i), 0);
+				edgeEnd.row(2 * i + curPosTheo_.size() + idx) = Eigen::Vector3d(0.01 * params_.topLine, curPosTheo_(i + 1), 0);
 
-				edgeStart.row(2 * i + curPos_.size() + 1 + curPos_.size() * 3 - 2) = Eigen::Vector3d(0.03 * params_.topLine, curPosTheo_(i), 0);
-				edgeEnd.row(2 * i + curPos_.size() + 1 + curPos_.size() * 3 - 2) = Eigen::Vector3d(0.03 * params_.topLine, curPosTheo_(i + 1), 0);
+				edgeStart.row(2 * i + curPosTheo_.size() + 1 + idx) = Eigen::Vector3d(0.03 * params_.topLine, curPosTheo_(i), 0);
+				edgeEnd.row(2 * i + curPosTheo_.size() + 1 + idx) = Eigen::Vector3d(0.03 * params_.topLine, curPosTheo_(i + 1), 0);
 			}
 		}
 
-		for (int i = 0; i < exactPos_.size(); i++)
+		/*for (int i = 0; i < exactPos_.size(); i++)
 		{
 			edgeStart.row(i + 2 * (exactPos_.size() * 3 - 2)) = Eigen::Vector3d(0.05 * params_.topLine, exactPos_(i), 0);
 			edgeEnd.row(i + 2 * (exactPos_.size() * 3 - 2)) = Eigen::Vector3d(0.07 * params_.topLine, exactPos_(i), 0);
@@ -426,7 +428,7 @@ void FiniteElementsGui::updateRenderGeometry()
 				edgeStart.row(2 * i + exactPos_.size() + 1 + 2 * (exactPos_.size() * 3 - 2)) = Eigen::Vector3d(0.07 * params_.topLine, exactPos_(i), 0);
 				edgeEnd.row(2 * i + exactPos_.size() + 1 + 2 * (exactPos_.size() * 3 - 2)) = Eigen::Vector3d(0.07 * params_.topLine, exactPos_(i + 1), 0);
 			}
-		}
+		}*/
 	}
 }
 
@@ -559,8 +561,8 @@ void FiniteElementsGui::initSimulation()
 		restPos(0) = params_.barHeight + params_.barLen;
 		for (int i = 1; i <= params_.numSegs; i++)
 		{
-			curPos_(i) = curPos_(0) - params_.barLen * i / params_.numSegs;
-			restPos(i) = curPos_(0) - 0.8 * params_.barLen * i / params_.numSegs;
+			curPos_(i) = curPos_(0) - 1.2 * params_.barLen * i / params_.numSegs;
+			restPos(i) = curPos_(0) - params_.barLen * i / params_.numSegs;
 			curF_.row(i - 1) << i - 1, i;
 
 			massVec(i) = params_.particleMass * params_.barLen / params_.numSegs;
@@ -630,10 +632,11 @@ bool FiniteElementsGui::simulateOneStep()
 		theoModel_.getCurPosVel(curQTheo_, curVelTheo_);
 		model_->convertVar2Pos(curQTheo_, curPosTheo_);
 
-		theoModel_.getTheoPosVel(curQExact_, curVelExact_);
-		model_->convertVar2Pos(curQExact_, exactPos_);
+	/*	theoModel_.getTheoPosVel(curQExact_, curVelExact_);
+		model_->convertVar2Pos(curQExact_, exactPos_);*/
 	}
 
+	/*
 	Eigen::VectorXd posNew, velNew;
 	switch (params_.integrator)
 	{
@@ -848,7 +851,7 @@ bool FiniteElementsGui::simulateOneStep()
 	curQ_ = posNew;
 	curVel_ = velNew;
 	model_->convertVar2Pos(curQ_, curPos_);
-
+	*/
 	time_ += params_.timeStep;
 	iterNum_ += 1;
 
@@ -892,7 +895,7 @@ void FiniteElementsGui::saveInfo()
 	double bottom = curQ_.minCoeff();
 	if(params_.isSaveInfo)
 		sfs << time_ << " " << springPotential << " " << gravityPotential << " " << model_->params_.barrierStiffness * IPCbarier << " " << internalContact * model_->params_.barrierStiffness << " " << kineticEnergy << " " << springPotential + gravityPotential + model_->params_.barrierStiffness * IPCbarier + kineticEnergy << " " << bottom;
-	std::cout << time_ << ", spring: " << springPotential << ", gravity: " << gravityPotential << ", IPC barrier: " << model_->params_.barrierStiffness * IPCbarier << " , Internal Barrier: " << internalContact * model_->params_.barrierStiffness << ", kinetic: " << kineticEnergy << ", total: " << springPotential + gravityPotential + model_->params_.barrierStiffness * IPCbarier + kineticEnergy << ", bottom pos: " << bottom;
+	/*std::cout << time_ << ", spring: " << springPotential << ", gravity: " << gravityPotential << ", IPC barrier: " << model_->params_.barrierStiffness * IPCbarier << " , Internal Barrier: " << internalContact * model_->params_.barrierStiffness << ", kinetic: " << kineticEnergy << ", total: " << springPotential + gravityPotential + model_->params_.barrierStiffness * IPCbarier + kineticEnergy << ", bottom pos: " << bottom;*/
 	if (isTheoretical_)
 	{
 		double theoBot = curQTheo_.minCoeff();

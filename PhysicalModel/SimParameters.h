@@ -23,7 +23,7 @@ struct SimParameters
         floorEnabled = false;
 		frictionEnabled = false;
 
-        youngs = 9e2;
+        youngs = 1e4;
         poisson = 0.3;
         elasticEnabled = true;
         internalContactEnabled = false;
@@ -38,7 +38,7 @@ struct SimParameters
         NM_beta = 0.25;
 
         modelType = MT_HARMONIC_1D;
-        materialType = MT_StVK;
+        materialType = MT_LINEAR;
         barrierStiffness = 1;
         barrierEps = 0.01;
 
@@ -46,15 +46,21 @@ struct SimParameters
         totalNumIter = totalTime / timeStep;
 
         numSegs = 10;
-        topLine = 20;
+       /* topLine = 20;
         barLen = 10;
-        barHeight = 5;
+        barHeight = 5;*/
+        topLine = 2;
+        barLen = 1;
+        barHeight = 0;
 
         numSpectra = 10;
         isSaveInfo = true;
         
         youngsType = YT_CONSTANT;
         youngsList.resize(youngs, youngs);
+
+        impulsePow = 10;
+        impulseMag = youngs / 2;
     }
 
     enum TimeIntegrator {TI_EXPLICIT_EULER, TI_VELOCITY_VERLET, TI_RUNGE_KUTTA, TI_EXP_ROSENBROCK_EULER, TI_IMPLICIT_EULER, TI_IMPLICIT_MIDPOINT, TI_TRAPEZOID, TI_TR_BDF2, TI_BDF2, TI_NEWMARK};
@@ -111,6 +117,9 @@ struct SimParameters
 
     int numSpectra;
     bool isSaveInfo;
+
+    int impulsePow;
+    double impulseMag;
 };
 
 #endif

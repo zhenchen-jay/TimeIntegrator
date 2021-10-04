@@ -20,6 +20,7 @@ public:
 	SpectraAnalysisLinearElements(const SimParameters& params, Eigen::VectorXd& q0, Eigen::VectorXd& v0, const LinearElements& model);
 	
 	void initialization();
+	void updateCis();
 	void updateAlphasBetas();
 	
 	void getCurPosVel(Eigen::VectorXd &pos, Eigen::VectorXd &vel);

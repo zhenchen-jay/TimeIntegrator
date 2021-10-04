@@ -3,6 +3,7 @@
 #include <Eigen/Eigenvalues>
 #include <fstream>
 #include "SpectraAnalysisLinearElements.h"
+#include "../PhysicalModel/ExternalForces.h"
 
 SpectraAnalysisLinearElements::SpectraAnalysisLinearElements(const SimParameters& params, Eigen::VectorXd& q0, Eigen::VectorXd& v0, const LinearElements& model)
 {
@@ -149,21 +150,39 @@ void SpectraAnalysisLinearElements::initialization()
 	}
 
 	// compute the constant part
-	cis_.resize(numSpectras_);
+	/*cis_.resize(numSpectras_);
 
 	for (int i = 0; i < numSpectras_; i++)
 	{
 		double value = eigenVecs_.col(i).dot(b_);
 		cis_[i] = value;
-	}
+	}*/
 
 	// current time
 	curTime_ = 0;
+
+	updateCis();
+}
+
+void SpectraAnalysisLinearElements::updateCis()
+{
+	Eigen::VectorXd extForce = ExternalForces::externalForce(q0_, curTime_, params_.impulseMag, params_.impulsePow);
+	Eigen::VectorXd c = b_ - extForce;
+
+	// compute the constant part
+	cis_.resize(numSpectras_);
+
+	for (int i = 0; i < numSpectras_; i++)
+	{
+		double value = eigenVecs_.col(i).dot(c);
+		cis_[i] = value;
+	}
 }
 
 void SpectraAnalysisLinearElements::updateAlphasBetas()
 {
 	double h = params_.timeStep;
+	updateCis();
 	for (int i = 0; i < numSpectras_; i++)
 	{
 		if (params_.integrator == SimParameters::TI_IMPLICIT_EULER)
