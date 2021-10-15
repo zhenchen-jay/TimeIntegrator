@@ -1,5 +1,5 @@
 #pragma once
-
+#include <filesystem>
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/unproject.h>
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
@@ -52,6 +52,32 @@ public:
 		viewer.data().set_colors(renderC);
 		Eigen::RowVector3d edgeColor(0, 0, 0);
 		viewer.data().add_edges(edgeStart, edgeEnd, edgeColor);
+
+		if(time_ > 0 && time_ < params_.totalTime)
+		{
+		    std::string imagePath = outputFolderPath_ + "/imgs/";
+		    if (!std::filesystem::exists(imagePath))
+		    {
+		        std::cout << "create directory: " << imagePath << std::endl;
+		        if (!std::filesystem::create_directories(imagePath))
+		        {
+		            std::cout << "create folder failed." << imagePath << std::endl;
+		        }
+		    }
+
+		    // Allocate temporary buffers
+		    Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> R(1280,800);
+		    Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> G(1280,800);
+		    Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> B(1280,800);
+		    Eigen::Matrix<unsigned char,Eigen::Dynamic,Eigen::Dynamic> A(1280,800);
+
+		    // Draw the scene in the buffers
+		    viewer.core().draw_buffer(
+		            viewer.data(),false,R,G,B,A);
+
+		    // Save it to a PNG
+		    igl::png::writePNG(R,G,B,A,imagePath + "out_" + std::to_string(iterNum_) + ".png");
+		}
 	}
 
 	void updateParams()

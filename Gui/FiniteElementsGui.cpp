@@ -3,7 +3,6 @@
 #include <iomanip>
 #include <iostream>
 #include <fstream>
-#include <filesystem>
 
 #include <igl/opengl/glfw/Viewer.h>
 #include <igl/opengl/glfw/imgui/ImGuiMenu.h>
@@ -173,7 +172,21 @@ void FiniteElementsGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu& menu)
 		if (ImGui::InputDouble("IPC Barrier stiffness", &params_.barrierStiffness))
 			reset();
 		if (ImGui::InputInt("Number of Spectra", &params_.numSpectra))
-			reset();
+		{
+		    if(params_.numSpectra > params_.numSegs)
+		        params_.numSegs = params_.numSegs;
+		    reset();
+		}
+		if (ImGui::InputInt("kick power", &params_.impulsePow))
+		{
+		    updateParams();
+		    reset();
+		}
+		if (ImGui::InputDouble("kick mag", &params_.impulseMag))
+		{
+		    updateParams();
+		    reset();
+		}
 		if (ImGui::Checkbox("Save Info", &params_.isSaveInfo))
 			updateParams();
 	}
@@ -519,7 +532,7 @@ void FiniteElementsGui::getOutputFolderPath()
 	switch (params_.materialType)
 	{
 	case SimParameters::MT_LINEAR:
-		outputFolderPath_ = outputFolderPath_ + "Linear/";
+		outputFolderPath_ = outputFolderPath_ + "LinearElements/";
 		break;
 	case SimParameters::MT_StVK:
 		outputFolderPath_ = outputFolderPath_ + "StVK/";
@@ -528,7 +541,7 @@ void FiniteElementsGui::getOutputFolderPath()
 		outputFolderPath_ = outputFolderPath_ + "NeoHookean/";
 		break;
 	}
-	
+	outputFolderPath_ = outputFolderPath_ + "impulse_mag_" + std::to_string(params_.impulsePow) + "_pow_" + std::to_string(params_.impulsePow) + "/";
 	switch (params_.integrator)
 	{
 	case SimParameters::TI_EXPLICIT_EULER:

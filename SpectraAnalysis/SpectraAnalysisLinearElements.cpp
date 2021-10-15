@@ -338,6 +338,17 @@ void SpectraAnalysisLinearElements::saveInfo(std::string outputFolder)
 		}
 	}
 
+	std::string evalsFileName = outputFolder + "evals.txt";
+    if(curTime_ == 0)
+    {
+        std::ofstream  efs;
+        efs.open(evalsFileName, std::ofstream::out);
+        for (int i = 0; i < numSpectras_; i++)
+        {
+            efs << eigenValues_[i] << std::endl;
+        }
+    }
+
 	for (int i = 0; i < numSpectras_; i++)
 	{
 		std::string alphafileName = outputFolder + "alpha_" + std::to_string(i) + ".txt";
@@ -346,7 +357,9 @@ void SpectraAnalysisLinearElements::saveInfo(std::string outputFolder)
 		std::string betafileName = outputFolder + "beta_" + std::to_string(i) + ".txt";
 		std::string theoBetafileName = outputFolder + "beta_theo_" + std::to_string(i) + ".txt";
 
-		std::ofstream afs, atfs, bfs, btfs;
+		std::string extFfileName = outputFolder + "c_" + std::to_string(i) + ".txt";
+
+		std::ofstream afs, atfs, bfs, btfs, cfs;
 
 		if (curTime_ == 0)
 		{
@@ -355,6 +368,8 @@ void SpectraAnalysisLinearElements::saveInfo(std::string outputFolder)
 
 			bfs.open(betafileName, std::ofstream::out);
 			btfs.open(theoBetafileName, std::ofstream::out);
+
+			cfs.open(extFfileName, std::ofstream::out);
 		}
 		else
 		{
@@ -363,6 +378,8 @@ void SpectraAnalysisLinearElements::saveInfo(std::string outputFolder)
 
 			bfs.open(betafileName, std::ofstream::out | std::ofstream::app);
 			btfs.open(theoBetafileName, std::ofstream::out | std::ofstream::app);
+
+			cfs.open(extFfileName, std::ofstream::out | std::ofstream::app);
 		}
 
 		afs << curAlphaBeta_[i](0) << std::endl;
@@ -370,5 +387,7 @@ void SpectraAnalysisLinearElements::saveInfo(std::string outputFolder)
 
 		bfs << curAlphaBeta_[i](1) << std::endl;
 		btfs << curAlphaBetaTheo_[i](1) << std::endl;
+
+		cfs << cis_[i] << std::endl;
 	}
 }
