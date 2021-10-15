@@ -33,6 +33,7 @@ public:
 		GIFDelay_ = 10;
 		GIFStep_ = 1;
 		iterNum_ = 0;
+		plotCompression_ = true;
 	}
 
 	void drawGUI(igl::opengl::glfw::imgui::ImGuiMenu& menu);
@@ -126,6 +127,7 @@ public:
 	double time_;
 	int iterNum_;
 	SimParameters params_;
+	bool plotCompression_;
 };
 
 

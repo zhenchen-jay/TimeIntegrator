@@ -13,14 +13,14 @@ struct SimParameters
         NewtonMaxIters = 20;
         NewtonTolerance = 1e-8;
 
-        gravityEnabled = false;
-        gravityG = 0;
+        gravityEnabled = true;
+        gravityG = -9.8;
         springsEnabled = true;
         springStiffness = 1e3;
         maxSpringStrain = 0.2;
         dampingEnabled = true;
         dampingStiffness = 1.0;
-        floorEnabled = false;
+        floorEnabled = true;
 		frictionEnabled = false;
 
         youngs = 1e4;
@@ -51,7 +51,7 @@ struct SimParameters
         barHeight = 5;*/
         topLine = 2;
         barLen = 1;
-        barHeight = 0;
+        barHeight = 0.5;
 
         numSpectra = 10;
         isSaveInfo = true;

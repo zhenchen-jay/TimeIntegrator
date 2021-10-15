@@ -89,6 +89,28 @@ void PhysicalModel::convertPos2Var(Eigen::VectorXd pos, Eigen::VectorXd &q)
     }
 }
 
+void PhysicalModel::computeCompression(Eigen::VectorXd pos, Eigen::VectorXd& compression)
+{
+	int nfaces = restF_.rows();
+	compression.resize(nfaces);
+	compression.setZero();
+	
+	for (int faceId = 0; faceId < nfaces; faceId++)
+	{
+		int v0 = restF_(faceId, 0);
+		int v1 = restF_(faceId, 1);
+
+		double drRest = restPos_(v1) - restPos_(v0);
+
+		double dr = pos(v1) - pos(v0);
+		if (dr / drRest < 1)	// compression does happen
+		{
+			compression(faceId) = 1 - dr / drRest;
+		}
+	}
+	
+}
+
 double PhysicalModel::computeEnergy(Eigen::VectorXd q)
 {
 	double energy = 0;

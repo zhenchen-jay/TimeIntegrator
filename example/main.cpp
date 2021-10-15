@@ -252,7 +252,7 @@ int main(int argc, char* argv[])
 			FEM = std::make_shared<FiniteElementsGui>();
 			FEM->reset();
 			FEM->renderRenderGeometry(viewer);
-			viewer.data().set_face_based(false);
+			viewer.data().set_face_based(FEM->plotCompression_);
 
 			if(FEM->params_.floorEnabled)
 				viewer.core().camera_zoom = 2.10;

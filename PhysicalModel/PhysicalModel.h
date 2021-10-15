@@ -45,6 +45,10 @@ public:
 	virtual void computeElasticGradientPerface(Eigen::VectorXd pos, int faceId, Eigen::Vector2d& grad) = 0;
 	virtual void computeElasticHessianPerface(Eigen::VectorXd pos, int faceId, Eigen::Matrix2d& hess) = 0;
 
+	// compression
+	void computeCompression(Eigen::VectorXd pos, Eigen::VectorXd& compression);
+
+
 	// floor barrier function
 	double computeFloorBarrier(Eigen::VectorXd q);
 	void computeFloorGradeint(Eigen::VectorXd q, Eigen::VectorXd& grad);
