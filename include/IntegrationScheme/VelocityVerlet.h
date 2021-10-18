@@ -22,6 +22,11 @@ v_{n+1} = v_n + h M^{-1} F(x_{n+1})
     template <typename Problem>
     void velocityVerlet(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext)
     {
+        if(h == 0)
+        {
+            xnext = xcur;
+            vnext = vcur;
+        }
         xnext = xcur + h * vcur;
         Eigen::VectorXd force;
         energyModel.computeGradient(xnext, force);

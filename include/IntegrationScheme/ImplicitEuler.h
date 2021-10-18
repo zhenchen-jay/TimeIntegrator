@@ -29,6 +29,11 @@ namespace TimeIntegrator
 	template <typename Problem>
 	void implicitEuler(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext)
 	{
+	    if(h == 0)
+	    {
+	        xnext = xcur;
+	        vnext = vcur;
+	    }
 		std::vector<Eigen::Triplet<double>> massTrip;
 		Eigen::SparseMatrix<double> massMat(M.size(), M.size());
 

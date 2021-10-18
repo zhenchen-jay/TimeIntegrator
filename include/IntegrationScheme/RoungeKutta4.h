@@ -35,6 +35,11 @@ d2 = M^{-1} F(x_n + h / 2 * c1)
 	template <typename Problem>
 	void RoungeKutta4(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext)
 	{
+	    if(h == 0)
+	    {
+	        xnext = xcur;
+	        vnext = vcur;
+	    }
 		std::vector<Eigen::Triplet<double>> massTrip;
 		Eigen::SparseMatrix<double> massMatInv(M.size(), M.size());
 

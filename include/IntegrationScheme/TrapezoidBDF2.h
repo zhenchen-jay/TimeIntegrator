@@ -47,6 +47,11 @@ v_{n+1} - \gamma_2 h M^{-1} F(x_{n + 1}) = \gamma_3 v_{n + 2\gamma} + (1 - \gamm
 	template <typename Problem>
 	void trapezoidBDF2(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext, double gamma = 1 - std::sqrt(2) / 2)
 	{
+	    if(h == 0)
+	    {
+	        xnext = xcur;
+	        vnext = vcur;
+	    }
 		std::vector<Eigen::Triplet<double>> massTrip;
 		Eigen::SparseMatrix<double> massMat(M.size(), M.size());
 

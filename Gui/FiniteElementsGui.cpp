@@ -703,6 +703,8 @@ void FiniteElementsGui::initSimulation()
 
 		theoModel_ = SpectraAnalysisLinearElements(params_, curQTheo_, curVelTheo_, *(static_cast<LinearElements*>(model_.get())));
 	}
+
+	initialEnergy_ = model_->computeEnergy(curQ_);
 }
 
 bool FiniteElementsGui::simulateOneStep()
@@ -953,17 +955,17 @@ bool FiniteElementsGui::simulateOneStep()
 			if (params_.materialType == SimParameters::MT_LINEAR)
 			{
 				std::cout << "model type: Linear Elasticity. Time integration: Split, split ratio = " << params_.splitRatio << std::endl;
-				TimeIntegrator::splitScheme<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew, params_.splitRatio);
+				TimeIntegrator::splitScheme<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew, params_.splitRatio, initialEnergy_);
 			}
 			else if (params_.materialType == SimParameters::MT_StVK)
 			{
 				std::cout << "model type: StVK. Time integration: Split, split ratio = " << params_.splitRatio << std::endl;
-				TimeIntegrator::splitScheme<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew, params_.splitRatio);
+				TimeIntegrator::splitScheme<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew, params_.splitRatio, initialEnergy_);
 			}
 			else if (params_.materialType == SimParameters::MT_NEOHOOKEAN)
 			{
 				std::cout << "model type: NeoHookean. Time integration: Split, split ratio = " << params_.splitRatio << std::endl;
-				TimeIntegrator::splitScheme<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew, params_.splitRatio);
+				TimeIntegrator::splitScheme<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew, params_.splitRatio, initialEnergy_);
 			}
 			break;
 		}

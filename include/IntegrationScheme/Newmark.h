@@ -26,6 +26,11 @@ x_{n+1} =  min_y 1/2 (y - xtilde)^T M (y - xtilde) + h^2 \beta E(y)
 	template <typename Problem>
 	void Newmark(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext, double gamma = 0.5, double beta = 0.25)
 	{
+	    if(h == 0)
+	    {
+	        xnext = xcur;
+	        vnext = vcur;
+	    }
 		std::vector<Eigen::Triplet<double>> massTrip;
 		Eigen::SparseMatrix<double> massMat(M.size(), M.size());
 

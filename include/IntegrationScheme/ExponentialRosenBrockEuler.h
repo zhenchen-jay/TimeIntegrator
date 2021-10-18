@@ -31,6 +31,11 @@ namespace TimeIntegrator
     template <typename Problem>
     void exponentialRosenBrockEuler(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext)
     {
+        if(h == 0)
+        {
+            xnext = xcur;
+            vnext = vcur;
+        }
         Eigen::VectorXd un(xcur.size() + vcur.size()), unbar(xcur.size() + vcur.size() + 1);
         un.segment(0, xcur.size()) = xcur;
         un.segment(xcur.size(), vcur.size()) = vcur;

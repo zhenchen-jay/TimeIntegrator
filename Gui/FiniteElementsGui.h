@@ -145,7 +145,7 @@ private:
 	std::vector<double> lastPassRestPointTime_;
 
 	bool saveperiodFile_;
-
+    double initialEnergy_;
 public:
 	bool isPaused_;
 	bool isTheoretical_;

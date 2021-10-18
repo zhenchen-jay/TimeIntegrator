@@ -29,6 +29,11 @@ v_{n+1} = v_n + h M^{-1} F((x_{n+1} + x_n) / 2)
 	template <typename Problem>
 	void implicitMidPoint(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext)
 	{
+	    if(h == 0)
+	    {
+	        xnext = xcur;
+	        vnext = vcur;
+	    }
 		std::vector<Eigen::Triplet<double>> massTrip;
 		Eigen::SparseMatrix<double> massMat(M.size(), M.size());
 
