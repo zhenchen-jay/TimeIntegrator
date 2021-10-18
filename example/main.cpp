@@ -254,8 +254,8 @@ int main(int argc, char* argv[])
 			FEM->renderRenderGeometry(viewer);
 			viewer.data().set_face_based(FEM->plotCompression_);
 
-			if(FEM->params_.floorEnabled)
-				viewer.core().camera_zoom = 2.10;
+			/*if(FEM->params_.floorEnabled)
+				viewer.core().camera_zoom = 2.10;*/
 		}
 		viewer.data().show_lines = false;
 		viewer.core().background_color << 1.0f, 1.0f, 1.0f, 1.0f;

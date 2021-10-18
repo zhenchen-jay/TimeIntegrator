@@ -28,6 +28,15 @@ public:
 	void computeGradient(Eigen::VectorXd q, Eigen::VectorXd& grad);
 	void computeHessian(Eigen::VectorXd q, Eigen::SparseMatrix<double>& hessian);
 
+
+	double computeEnergyPart1(Eigen::VectorXd q);
+	void computeGradientPart1(Eigen::VectorXd q, Eigen::VectorXd& grad);
+	void computeHessianPart1(Eigen::VectorXd q, Eigen::SparseMatrix<double>& hessian);
+
+	double computeEnergyPart2(Eigen::VectorXd q);
+	void computeGradientPart2(Eigen::VectorXd q, Eigen::VectorXd& grad);
+	void computeHessianPart2(Eigen::VectorXd q, Eigen::SparseMatrix<double>& hessian);
+
 	// convert variable to current pos state
 	void convertVar2Pos(Eigen::VectorXd q, Eigen::VectorXd &pos);
 	void convertPos2Var(Eigen::VectorXd pos, Eigen::VectorXd &q);

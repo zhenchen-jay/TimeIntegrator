@@ -23,7 +23,8 @@
 #include "../include/IntegrationScheme/TrapezoidBDF2.h"
 #include "../include/IntegrationScheme/BDF2.h"
 #include "../include/IntegrationScheme/Newmark.h"
-
+#include "../include/IntegrationScheme/AdditiveScheme.h"
+#include "../include/IntegrationScheme/SplitScheme.h"
 
 using namespace Eigen;
 
@@ -153,7 +154,9 @@ void FiniteElementsGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu& menu)
 		    updateParams();
 		    reset();
 		}
-		if (ImGui::Combo("Integrator", (int*)&params_.integrator, "Explicit Euler\0Velocity Verlet\0Runge Kutta 4\0Exp Euler\0Implicit Euler\0Implicit Midpoint\0Trapzoid\0TRBDF2\0BDF2\0Newmark\0\0"))
+		if (ImGui::Combo("Integrator", (int*)&params_.integrator, "Explicit Euler\0Velocity Verlet\0Runge Kutta 4\0Exp Euler\0Implicit Euler\0Implicit Midpoint\0Trapzoid\0TRBDF2\0BDF2\0Newmark\0Additive\0Split\0\0"))
+			updateParams();
+		if (ImGui::InputDouble("Split ratio", &params_.splitRatio))
 			updateParams();
 		if (ImGui::InputDouble("Newmark Gamma", &params_.NM_gamma))
 			updateParams();
@@ -574,6 +577,12 @@ void FiniteElementsGui::getOutputFolderPath()
 	case SimParameters::TI_NEWMARK:
 		outputFolderPath_ = outputFolderPath_ + "Newmark/";
 		break;
+	case SimParameters::TI_ADDITIVE:
+		outputFolderPath_ = outputFolderPath_ + "Additive/";
+		break;
+	case SimParameters::TI_SPLIT:
+		outputFolderPath_ = outputFolderPath_ + "Split_" + std::to_string(params_.splitRatio) + "/";
+		break;
 	}
 
 	if (!std::filesystem::exists(outputFolderPath_))
@@ -920,6 +929,41 @@ bool FiniteElementsGui::simulateOneStep()
 			{
 				std::cout << "model type: NeoHookean. Time integration: Newmark." << std::endl;
 				TimeIntegrator::Newmark<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew, params_.NM_gamma, params_.NM_beta);
+			}
+			break;
+
+		case SimParameters::TI_ADDITIVE:
+			if (params_.materialType == SimParameters::MT_LINEAR)
+			{
+				std::cout << "model type: Linear Elasticity. Time integration: Additive." << std::endl;
+				TimeIntegrator::additiveScheme<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew);
+			}
+			else if (params_.materialType == SimParameters::MT_StVK)
+			{
+				std::cout << "model type: StVK. Time integration: Additive." << std::endl;
+				TimeIntegrator::additiveScheme<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew);
+			}
+			else if (params_.materialType == SimParameters::MT_NEOHOOKEAN)
+			{
+				std::cout << "model type: NeoHookean. Time integration: Additive." << std::endl;
+				TimeIntegrator::additiveScheme<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
+			}
+			break;
+		case SimParameters::TI_SPLIT:
+			if (params_.materialType == SimParameters::MT_LINEAR)
+			{
+				std::cout << "model type: Linear Elasticity. Time integration: Split, split ratio = " << params_.splitRatio << std::endl;
+				TimeIntegrator::splitScheme<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew, params_.splitRatio);
+			}
+			else if (params_.materialType == SimParameters::MT_StVK)
+			{
+				std::cout << "model type: StVK. Time integration: Split, split ratio = " << params_.splitRatio << std::endl;
+				TimeIntegrator::splitScheme<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew, params_.splitRatio);
+			}
+			else if (params_.materialType == SimParameters::MT_NEOHOOKEAN)
+			{
+				std::cout << "model type: NeoHookean. Time integration: Split, split ratio = " << params_.splitRatio << std::endl;
+				TimeIntegrator::splitScheme<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew, params_.splitRatio);
 			}
 			break;
 		}

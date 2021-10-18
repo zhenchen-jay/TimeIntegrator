@@ -59,7 +59,7 @@ void OptSolver::newtonSolver(std::function<double(Eigen::VectorXd, Eigen::Vector
 			return;
 	}
 	if (i >= numIter)
-		std::cout << "terminate with reaching the maximum iteration." << std::endl;
+		std::cout << "terminate with reaching the maximum iteration, with gradient L2-norm = " << grad.norm() << std::endl;
 }
 
 

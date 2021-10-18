@@ -187,6 +187,108 @@ void PhysicalModel::computeHessian(Eigen::VectorXd q, Eigen::SparseMatrix<double
 }
 
 
+
+double PhysicalModel::computeEnergyPart1(Eigen::VectorXd q)
+{
+	double energy = 0;
+
+	if (params_.gravityEnabled)
+		energy += computeGravityPotential(q);
+	if (params_.elasticEnabled)
+		energy += computeElasticPotential(q);
+	return energy;
+}
+
+
+// gradient
+void PhysicalModel::computeGradientPart1(Eigen::VectorXd q, Eigen::VectorXd& grad)
+{
+	grad = Eigen::VectorXd::Zero(q.size());
+	if (params_.gravityEnabled)
+	{
+		Eigen::VectorXd gravityGrad;
+		computeGravityGradient(q, gravityGrad);
+		grad += gravityGrad;
+	}
+	if (params_.elasticEnabled)
+	{
+		Eigen::VectorXd springGrad;
+		computeElasticGradient(q, springGrad);
+		grad += springGrad;
+	}
+	
+}
+
+// hessian
+void PhysicalModel::computeHessianPart1(Eigen::VectorXd q, Eigen::SparseMatrix<double>& hessian)
+{
+	//Hessian of gravity is zero
+	std::vector<Eigen::Triplet<double>> hessianT;
+	if (params_.elasticEnabled)
+		computeElasticHessian(q, hessianT);
+	hessian.resize(q.size(), q.size());
+	hessian.setFromTriplets(hessianT.begin(), hessianT.end());
+}
+
+
+double PhysicalModel::computeEnergyPart2(Eigen::VectorXd q)
+{
+	double energy = 0;
+
+	if (params_.floorEnabled)
+		energy += computeFloorBarrier(q);
+	if (params_.internalContactEnabled)
+		energy += computeInternalBarrier(q);
+	return energy;
+}
+
+
+// gradient
+void PhysicalModel::computeGradientPart2(Eigen::VectorXd q, Eigen::VectorXd& grad)
+{
+	grad = Eigen::VectorXd::Zero(q.size());
+	if (params_.floorEnabled)
+	{
+		Eigen::VectorXd floorGrad;
+		computeFloorGradeint(q, floorGrad);
+		grad += params_.barrierStiffness * floorGrad;
+	}
+	if (params_.internalContactEnabled)
+	{
+		Eigen::VectorXd internalContactGrad;
+		computeInternalGradient(q, internalContactGrad);
+		grad += params_.barrierStiffness * internalContactGrad;
+	}
+}
+
+// hessian
+void PhysicalModel::computeHessianPart2(Eigen::VectorXd q, Eigen::SparseMatrix<double>& hessian)
+{
+	//Hessian of gravity is zero
+	std::vector<Eigen::Triplet<double>> hessianT;
+	if (params_.floorEnabled)
+	{
+		std::vector<Eigen::Triplet<double>> floorT;
+		computeFloorHessian(q, floorT);
+		for (int i = 0; i < floorT.size(); i++)
+		{
+			hessianT.push_back(Eigen::Triplet<double>(floorT[i].row(), floorT[i].col(), params_.barrierStiffness * floorT[i].value()));
+		}
+	}
+	if (params_.internalContactEnabled)
+	{
+		std::vector<Eigen::Triplet<double>> internlT;
+		computeInternalHessian(q, internlT);
+		for (int i = 0; i < internlT.size(); i++)
+		{
+			hessianT.push_back(Eigen::Triplet<double>(internlT[i].row(), internlT[i].col(), params_.barrierStiffness * internlT[i].value()));
+		}
+	}
+	hessian.resize(q.size(), q.size());
+	hessian.setFromTriplets(hessianT.begin(), hessianT.end());
+}
+
+
 // Elastic potential
 double PhysicalModel::computeElasticPotential(Eigen::VectorXd q)
 {

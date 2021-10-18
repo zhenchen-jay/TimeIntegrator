@@ -61,9 +61,11 @@ struct SimParameters
 
         impulsePow = 10;
         impulseMag = youngs / 2;
+
+        splitRatio = 0.5;
     }
 
-    enum TimeIntegrator {TI_EXPLICIT_EULER, TI_VELOCITY_VERLET, TI_RUNGE_KUTTA, TI_EXP_ROSENBROCK_EULER, TI_IMPLICIT_EULER, TI_IMPLICIT_MIDPOINT, TI_TRAPEZOID, TI_TR_BDF2, TI_BDF2, TI_NEWMARK};
+    enum TimeIntegrator {TI_EXPLICIT_EULER, TI_VELOCITY_VERLET, TI_RUNGE_KUTTA, TI_EXP_ROSENBROCK_EULER, TI_IMPLICIT_EULER, TI_IMPLICIT_MIDPOINT, TI_TRAPEZOID, TI_TR_BDF2, TI_BDF2, TI_NEWMARK, TI_ADDITIVE, TI_SPLIT};
     enum ModelType {MT_HARMONIC_1D, MT_POGO_STICK};
     enum MaterialType {MT_LINEAR, MT_StVK, MT_NEOHOOKEAN};
     enum YoungsType {YT_CONSTANT, YT_LINEAR, YT_RANDOM};
@@ -120,6 +122,8 @@ struct SimParameters
 
     int impulsePow;
     double impulseMag;
+
+    double splitRatio;
 };
 
 #endif
