@@ -92,6 +92,12 @@ x_{n+1} =  min_y 1/2 (y - xtilde)^T M (y - xtilde) + h^2 \beta E(y)
 
 
 		vnext = vcur + h * massMatInv * ((1 - gamma) * fcur + gamma * forceNext);
+
+		auto totalEnergy = [&](Eigen::VectorXd x, Eigen::VectorXd v){
+		    return 0.5 * v.dot(massMat * v) + energyModel.computeEnergy(x);
+		};
+
+		std::cout << "energy before update: " << totalEnergy(xcur, vcur) << ", energy after update: " << totalEnergy(xnext, vnext) << std::endl;
 	}
 
 }

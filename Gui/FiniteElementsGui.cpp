@@ -938,17 +938,17 @@ bool FiniteElementsGui::simulateOneStep()
 			if (params_.materialType == SimParameters::MT_LINEAR)
 			{
 				std::cout << "model type: Linear Elasticity. Time integration: Additive." << std::endl;
-				TimeIntegrator::additiveScheme<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew);
+				TimeIntegrator::additiveScheme<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew,initialEnergy_);
 			}
 			else if (params_.materialType == SimParameters::MT_StVK)
 			{
 				std::cout << "model type: StVK. Time integration: Additive." << std::endl;
-				TimeIntegrator::additiveScheme<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew);
+				TimeIntegrator::additiveScheme<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew, initialEnergy_);
 			}
 			else if (params_.materialType == SimParameters::MT_NEOHOOKEAN)
 			{
 				std::cout << "model type: NeoHookean. Time integration: Additive." << std::endl;
-				TimeIntegrator::additiveScheme<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew);
+				TimeIntegrator::additiveScheme<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew, initialEnergy_);
 			}
 			break;
 		case SimParameters::TI_SPLIT:
