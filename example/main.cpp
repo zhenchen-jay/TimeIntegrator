@@ -16,6 +16,7 @@ std::shared_ptr<GooHook1dCli> hookCli = NULL;
 
 bool isHookModel = false;
 
+
 void toggleSimulation(igl::opengl::glfw::Viewer& viewer)
 {
 	if (!hook && !FEM)
