@@ -25,6 +25,7 @@
 #include "../include/IntegrationScheme/Newmark.h"
 #include "../include/IntegrationScheme/AdditiveScheme.h"
 #include "../include/IntegrationScheme/SplitScheme.h"
+#include "../include/IntegrationScheme/CompositeScheme.h"
 
 using namespace Eigen;
 
@@ -154,13 +155,15 @@ void FiniteElementsGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu& menu)
 		    updateParams();
 		    reset();
 		}
-		if (ImGui::Combo("Integrator", (int*)&params_.integrator, "Explicit Euler\0Velocity Verlet\0Runge Kutta 4\0Exp Euler\0Implicit Euler\0Implicit Midpoint\0Trapzoid\0TRBDF2\0BDF2\0Newmark\0Additive\0Split\0\0"))
+		if (ImGui::Combo("Integrator", (int*)&params_.integrator, "Explicit Euler\0Velocity Verlet\0Runge Kutta 4\0Exp Euler\0Implicit Euler\0Implicit Midpoint\0Trapzoid\0TRBDF2\0BDF2\0Newmark\0Additive\0Split\0Composite\0\0"))
 			updateParams();
 		if (ImGui::InputDouble("Split ratio", &params_.splitRatio))
 			updateParams();
 		if (ImGui::InputDouble("Newmark Gamma", &params_.NM_gamma))
 			updateParams();
 		if (ImGui::InputDouble("Newmark Beta", &params_.NM_beta))
+			updateParams();
+		if (ImGui::InputDouble("Composte rho", &params_.rho))
 			updateParams();
 		if (ImGui::InputDouble("TRBDF2 Gamma", &params_.TRBDF2_gamma))
 			updateParams();
@@ -583,6 +586,9 @@ void FiniteElementsGui::getOutputFolderPath()
 	case SimParameters::TI_SPLIT:
 		outputFolderPath_ = outputFolderPath_ + "Split_" + std::to_string(params_.splitRatio) + "/";
 		break;
+	case SimParameters::TI_COMPOSITE:
+		outputFolderPath_ = outputFolderPath_ + "Composite/";
+		break;
 	}
 
 	if (!std::filesystem::exists(outputFolderPath_))
@@ -966,6 +972,23 @@ bool FiniteElementsGui::simulateOneStep()
 			{
 				std::cout << "model type: NeoHookean. Time integration: Split, split ratio = " << params_.splitRatio << std::endl;
 				TimeIntegrator::splitScheme<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew, params_.splitRatio, initialEnergy_);
+			}
+			break;
+		case SimParameters::TI_COMPOSITE:
+			if (params_.materialType == SimParameters::MT_LINEAR)
+			{
+				std::cout << "model type: Linear Elasticity. Time integration: Composite " << std::endl;
+				TimeIntegrator::compositeScheme<LinearElements>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<LinearElements*>(model_.get())), posNew, velNew, params_.rho);
+			}
+			else if (params_.materialType == SimParameters::MT_StVK)
+			{
+				std::cout << "model type: StVK. Time integration: Composite " << std::endl;
+				TimeIntegrator::compositeScheme<StVK>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<StVK*>(model_.get())), posNew, velNew, params_.rho);
+			}
+			else if (params_.materialType == SimParameters::MT_NEOHOOKEAN)
+			{
+				std::cout << "model type: NeoHookean. Time integration: Composite " << std::endl;
+				TimeIntegrator::compositeScheme<NeoHookean>(curQ_, curVel_, params_.timeStep, model_->massVec_, *(static_cast<NeoHookean*>(model_.get())), posNew, velNew, params_.rho);
 			}
 			break;
 		}
