@@ -118,7 +118,7 @@ where F = Fe + Fc, if gamma = gamma1 = 1/2, then the integration is second order
 
 		double Ecur = totalEnergy(xcur, vcur);
 		double gamma1 = 0.5;
-
+		
 		auto binarySearch = [&](double begin, double end)
 		{
 			double mid = (begin + end) / 2;

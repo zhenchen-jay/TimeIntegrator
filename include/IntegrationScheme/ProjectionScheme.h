@@ -67,8 +67,8 @@ namespace TimeIntegrator
 		*     c_2(q^k) + \nabla c_2(q^k)^T (q - q^k) = 0
 		* This can be solved by Lagrange multiplier. (stop with max(|c_1|, |c_2|) < 1e-7)
 		*/
-
-		auto totalEnergy = [&](Eigen::VectorXd x, Eigen::VectorXd v, Eigen::VectorXd* grad, std::vector<Eigen::Triplet<double>>* hess)
+		
+		auto totalEnergy = [&](Eigen::VectorXd x, Eigen::VectorXd v, Eigen::VectorXd* grad = NULL, std::vector<Eigen::Triplet<double>>* hess = NULL)
 		{
 			double E = 1.0 / 2.0 * v.transpose() * massMat * v + energyModel.computeEnergy(x);
 			int nverts = x.rows();
@@ -76,7 +76,7 @@ namespace TimeIntegrator
 			{
 				Eigen::VectorXd g1;
 				energyModel.computeGradient(x, g1);
-				grad->setZero(2 * nverts;
+				grad->setZero(2 * nverts);
 
 				grad->segment(0, nverts) = g1;
 				grad->segment(nverts, nverts) = massMat * v;
@@ -90,7 +90,7 @@ namespace TimeIntegrator
 
 				for (int k = 0; k < H.outerSize(); ++k)
 					for (Eigen::SparseMatrix<double>::InnerIterator it(H, k); it; ++it)
-						hess->push_back({ it.row(), it.col(), it.value() });
+						hess->push_back(Eigen::Triplet<double>(it.row(), it.col(), it.value()));
 
 				for (int i = 0; i < nverts; i++)
 					hess->push_back({ nverts + i , nverts + i,  M(i) });
@@ -99,27 +99,101 @@ namespace TimeIntegrator
 			return E;
 		};
 
-		auto totalLinearMomentum = [&](Eigen::VectorXd v, Eigen::VectorXd* grad)
+		auto totalLinearMomentum = [&](Eigen::VectorXd v, Eigen::VectorXd* grad = NULL)
 		{
-			double p = 0;
+			double P = 0;
 			int nverts = v.rows();
 			for (int i = 0; i < nverts; i++)
 				P += v(i) * M(i);
-			
+
 			if (grad)
 				(*grad) = M;
+			return P;
 		};
 
-		double Hn = totalEnergy(xcur, vcur, NULL, NULL);
-		double Pn = totalLinearMomentum(vcur, NULL);
-		double Ppred = totalLinearMomentum(vPred, NULL);
+		int nverts = xcur.size();
+		double Hn = totalEnergy(xcur, vcur);
+		double Hnplus1 = totalEnergy(xPred, vPred);
+		double Pn = totalLinearMomentum(vcur);
+		double Pnplus1 = totalLinearMomentum(vPred);
+
+		auto constraints = [&](Eigen::VectorXd x, Eigen::VectorXd v, double s, Eigen::MatrixXd* grad)
+		{
+			Eigen::Vector2d c(0, 0);
+
+			c(0) = totalEnergy(x, v) - Hn;
+			c(1) = totalLinearMomentum(v) - s * Pn - (1 - s) * Pnplus1;
+
+			if (grad)
+			{
+				grad->setZero(2, 2 * xcur.size() + 1);
+
+				Eigen::VectorXd energyGrad, momentumGrad;
+				double E = totalEnergy(x, v, &energyGrad);
+				double P = totalLinearMomentum(v, &momentumGrad);
+
+				grad->row(0).segment(0, 2 * xcur.size()) = energyGrad;
+				grad->row(1).segment(xcur.size(), xcur.size()) = momentumGrad;
+				(*grad)(1, 2 * xcur.size()) = Pn - Pnplus1;
+			}
+			return c;
+		};
+
+		// form the matrix D and D^{-1}
+		std::vector<Eigen::Triplet<double>> T, Tinv;
+		for (int i = 0 ; i < nverts; i++)
+		{
+			T.push_back({ i, i, M(i) });
+			T.push_back({ i + nverts, i + nverts, M(i) * h * h });
+
+			Tinv.push_back({ i, i, 1.0 / M(i) });
+			Tinv.push_back({ i + nverts, i + nverts, 1.0 / (M(i) * h * h) });
+		}
+			
+		T.push_back({ 2 * nverts, 2 * nverts, 1e-4 });
+		Tinv.push_back({ 2 * nverts, 2 * nverts, 1e4 });
+
+		Eigen::SparseMatrix<double> D, Dinv;
+		D.resize(2 * nverts + 1, 2 * nverts + 1);
+		Dinv.resize(2 * nverts + 1, 2 * nverts + 1);
+
+		D.setFromTriplets(T.begin(), T.end());
+		Dinv.setFromTriplets(T.begin(), T.end());
+
+		Eigen::VectorXd xk = xPred;
+		Eigen::VectorXd vk = vPred;
+		double sk = 0;
 
 		for (int iter = 0; iter < 1000; iter++)
 		{
+			Eigen::Vector2d c;
+			Eigen::MatrixXd gradc;
+			
+			c = constraints(xk, vk, sk, &gradc);
+			std::cout << "inner iter: " << iter << ", const norm: " << c.lpNorm<1>() << std::endl;
+			
 
+			Eigen::Matrix2d A = gradc * Dinv * gradc.transpose();
+			Eigen::Vector2d lambda = A.colPivHouseholderQr().solve(c);
+
+			Eigen::VectorXd update = Dinv * gradc.transpose() * lambda;
+
+			std::cout << "(pos, update): "<< std::endl;
+			for (int i = 0; i < nverts; i++)
+			{
+				std::cout << "(" << xk(i) << ", " << update(i) << ")" << std::endl;
+			}
+
+			xk = xk - update.segment(0, nverts);
+			vk = vk - update.segment(nverts, nverts);
+			sk = sk - update(2 * nverts);
+			
+			if (c.lpNorm<1>() < 1e-7)
+				break;
 		}
-
-		std::cout << "energy before update: " << totalEnergy(xcur, vcur) << ", energy after update: " << totalEnergy(xnext, vnext) << std::endl;
+		xnext = xk;
+		vnext = vk;
+		std::cout << "energy before update: " << Hn << ", energy got by base TI: " << Hnplus1 << ", energy after projection: " << totalEnergy(xnext, vnext) << std::endl;
 	}
 
 }

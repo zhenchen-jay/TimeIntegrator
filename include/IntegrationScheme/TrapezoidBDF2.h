@@ -150,6 +150,12 @@ v_{n+1} - \gamma_2 h M^{-1} F(x_{n + 1}) = \gamma_3 v_{n + 2\gamma} + (1 - \gamm
 			vnext = gamma3 * vGamma - (1 - gamma3) * vcur + (gamma2 * h) * massMatInv * forceNext;
 		}
 
+		auto totalEnergy = [&](Eigen::VectorXd x, Eigen::VectorXd v) {
+			return 0.5 * v.dot(massMat * v) + energyModel.computeEnergy(x);
+		};
+
+		std::cout << "energy before update: " << totalEnergy(xcur, vcur) << ", energy after update: " << totalEnergy(xnext, vnext) << std::endl;
+
 	}
 }
 
