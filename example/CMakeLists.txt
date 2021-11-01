@@ -2,6 +2,7 @@ project(test_Integrator)
 file(GLOB SRCFILES  
     *.cpp 
     ../PhysicalModel/*.cpp 
+    ../CompositeModel/*.cpp
     ../Gui/*.cpp 
     ../Cli/*.cpp
     ../SpectraAnalysis/*.cpp
@@ -9,6 +10,7 @@ file(GLOB SRCFILES
     ../src/Optimization/*.cpp
     *.h 
     ../PhysicalModel/*.h
+    ../CompositeModel/*.h
     ../Gui/*.h
     ../Cli/*.h 
     ../SpectraAnalysis/*.h

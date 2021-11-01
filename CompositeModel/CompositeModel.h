@@ -1,21 +1,18 @@
 #pragma once
-#include "SimParameters.h"
 #include <map>
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 
-class PhysicalModel
+#include "FiniteElement.h"
+
+class CompositeModel
 {
 public:
-	PhysicalModel() {}
-	PhysicalModel(SimParameters simParams)
-	{
-		params_ = simParams;
-	}
-	virtual ~PhysicalModel() = default;
+	CompositeModel() {}
+	virtual ~CompositeModel() = default;
 
-	void initialize(Eigen::VectorXd restPos, Eigen::MatrixXi restF, Eigen::VectorXd massVec, std::map<int, double>* clampedPoints);
+	void initialize(Eigen::VectorXd resPos, std::vector<FiniteElement> elements, Eigen::VectorXd massVec, std::map<int, double>* clampedPoints);
 	void updateProjM(std::map<int, double>* clampedPoints);
 	
 	// Implement potential computation
@@ -45,28 +42,24 @@ public:
 	void computeElasticGradient(Eigen::VectorXd pos, Eigen::VectorXd& grad);
 	void computeElasticHessian(Eigen::VectorXd pos, std::vector<Eigen::Triplet<double> >& hessian);
 
-	virtual double computeElasticPotentialPerface(Eigen::VectorXd pos, int faceId) = 0 ;
-	virtual void computeElasticGradientPerface(Eigen::VectorXd pos, int faceId, Eigen::Vector2d& grad) = 0;
-	virtual void computeElasticHessianPerface(Eigen::VectorXd pos, int faceId, Eigen::Matrix2d& hess) = 0;
-
 	// compression
 	void computeCompression(Eigen::VectorXd pos, Eigen::VectorXd& compression);
 
 
 	// floor barrier function
-	double computeFloorBarrier(Eigen::VectorXd q);
-	void computeFloorGradeint(Eigen::VectorXd q, Eigen::VectorXd& grad);
-	void computeFloorHessian(Eigen::VectorXd q, std::vector<Eigen::Triplet<double>>& hessian);
+	double computeFloorBarrier(Eigen::VectorXd pos);
+	void computeFloorGradeint(Eigen::VectorXd pos, Eigen::VectorXd& grad);
+	void computeFloorHessian(Eigen::VectorXd pos, std::vector<Eigen::Triplet<double>>& hessian);
 
 	// internal contact barrier
-	double computeInternalBarrier(Eigen::VectorXd q);
-	void computeInternalGradient(Eigen::VectorXd q, Eigen::VectorXd& grad);
-	void computeInternalHessian(Eigen::VectorXd q, std::vector<Eigen::Triplet<double>>& hessian);
+	double computeInternalBarrier(Eigen::VectorXd pos);
+	void computeInternalGradient(Eigen::VectorXd pos, Eigen::VectorXd& grad);
+	void computeInternalHessian(Eigen::VectorXd pos, std::vector<Eigen::Triplet<double>>& hessian);
 
 
 	double getMaxStepSize(Eigen::VectorXd q, Eigen::VectorXd dir);
 
-	void assembleMass(Eigen::VectorXd massVec);
+	Eigen::VectorXd assembleMass(Eigen::VectorXd massVec);
 
 	// right now, do nothing
 	void preTimeStep(Eigen::VectorXd q) {}
@@ -75,30 +68,24 @@ public:
 	void testPotentialDifferential(Eigen::VectorXd q);
 	void testGradientDifferential(Eigen::VectorXd q);
 
-	void testFloorBarrierEnergy(Eigen::VectorXd q);
-	void testFloorBarrierGradient(Eigen::VectorXd q);
+	// void testFloorBarrierEnergy(Eigen::VectorXd q);
+	// void testFloorBarrierGradient(Eigen::VectorXd q);
 
-	void testInternalBarrierEnergy(Eigen::VectorXd q);
-    void testInternalBarrierGradient(Eigen::VectorXd q);
+	// void testInternalBarrierEnergy(Eigen::VectorXd q);
+    // void testInternalBarrierGradient(Eigen::VectorXd q);
 
-	void testPotentialDifferentialPerface(Eigen::VectorXd q, int faceId);
-	void testGradientDifferentialPerface(Eigen::VectorXd q, int faceId);
+	// void testPotentialDifferentialPerface(Eigen::VectorXd q, int faceId);
+	// void testGradientDifferentialPerface(Eigen::VectorXd q, int faceId);
 
-	void testElasticEnergy(Eigen::VectorXd q);
-	void testElasticGradient(Eigen::VectorXd q);
+	// void testElasticEnergy(Eigen::VectorXd q);
+	// void testElasticGradient(Eigen::VectorXd q);
 	
 
 public:
-	SimParameters params_;
 	Eigen::VectorXd restPos_;
-	Eigen::VectorXd curPos_;
-	Eigen::MatrixXi restF_;
+	std::vector<FiniteElement> elements_;
 	Eigen::SparseMatrix<double> projM_;
 	Eigen::SparseMatrix<double> unProjM_;
-	std::vector<int> indexMap_;
-	std::vector<int> indexInvMap_;
-
+	std::vector<bool> fixedPos_;
 	Eigen::VectorXd massVec_;
-
-	std::map<int, double> clampedPos_;
 };
