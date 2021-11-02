@@ -5,7 +5,7 @@ class NHElement : public FiniteElement
 {
 public:
 	NHElement() {}
-	NHElement(double youngs, double poisson, double restP0, double restP1) : FiniteElement(simParams, restP0, restP1)
+	NHElement(double youngs, double poisson, double restP0, double restP1, int vid0, int vid1) : FiniteElement(youngs, poisson, restP0, restP1, vid0, vid1)
 	{}
 
 	virtual double computeElementPotential(double P0, double P1, Eigen::Vector2d *grad = NULL, Eigen::Matrix2d *hess = NULL) override;

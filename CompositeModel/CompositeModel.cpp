@@ -4,10 +4,11 @@
 #include "CompositeModel.h"
 
 
-void CompositeModel::initialize(Eigen::VectorXd resPos, std::vector<FiniteElement> elements, Eigen::VectorXd massVec, std::map<int, double>* clampedPoints)
+void CompositeModel::initialize(SimParameters params, Eigen::VectorXd restPos, std::vector<std::shared_ptr<FiniteElement>> elements, Eigen::VectorXd massVec, std::map<int, double>* clampedPoints)
 {
 	elements_ = elements;
-	resPos_ = restPos;
+	restPos_ = restPos;
+	params_ = params;
 
 	updateProjM(clampedPoints);
 	// assembleMass(massVec);
@@ -17,9 +18,13 @@ void CompositeModel::initialize(Eigen::VectorXd resPos, std::vector<FiniteElemen
 void CompositeModel::updateProjM(std::map<int, double> *clampedPoints)
 {
 	int row = 0;
-	int nverts = massVec_.size();
+	int nverts = restPos_.size();
 
 	fixedPos_.resize(nverts, false);
+	std::vector<Eigen::Triplet<double>> T;
+
+	if (clampedPoints)
+		clampedPoints_ = *clampedPoints;
 
 	for (int i = 0; i < nverts; i++)
 	{
@@ -27,7 +32,7 @@ void CompositeModel::updateProjM(std::map<int, double> *clampedPoints)
 	    {
 	        if (clampedPoints->find(i) != clampedPoints->end())
 			{
-				fixedPos[i] = true;
+				fixedPos_[i] = true;
 				continue;
 			}
 	            
@@ -50,7 +55,7 @@ void CompositeModel::convertVar2Pos(Eigen::VectorXd q, Eigen::VectorXd &pos)
 {
     pos = unProjM_ * q;
 
-    for(auto &it : clampedPos_)
+    for(auto &it : clampedPoints_)
         pos(it.first) = it.second;
 }
 
@@ -65,17 +70,17 @@ void CompositeModel::computeCompression(Eigen::VectorXd pos, Eigen::VectorXd& co
 	compression.resize(nfaces);
 	compression.setZero();
 	
-	for (int faceId = 0; faceId < nfaces; faceId++)
+	for (int i = 0; i < nfaces; i++)
 	{
-		int v0 = elements_[i].vid0_;
-		int v1 = elements_[i].vid1_;
+		int v0 = elements_[i]->vid0_;
+		int v1 = elements_[i]->vid1_;
 
-		double drRest = elements_[i].restP1_ - elements_[i].restP0_;
+		double drRest = elements_[i]->restP1_ - elements_[i]->restP0_;
 
 		double dr = pos(v1) - pos(v0);
 		if (dr / drRest < 1)	// compression does happen
 		{
-			compression(faceId) = 1 - dr / drRest;
+			compression(i) = 1 - dr / drRest;
 		}
 	}
 	
@@ -293,10 +298,10 @@ double CompositeModel::computeElasticPotential(Eigen::VectorXd pos)
 	double energy = 0;
 	for(auto &el : elements_)
 	{
-		int v0 = el.vid0_;
-		int v1 = el.vid1_;
+		int v0 = el->vid0_;
+		int v1 = el->vid1_;
 
-		energy += el.computeElementPotential(pos(v0), pos(v1));
+		energy += el->computeElementPotential(pos(v0), pos(v1));
 
 	}
 	return energy;
@@ -307,14 +312,14 @@ void CompositeModel::computeElasticGradient(Eigen::VectorXd pos, Eigen::VectorXd
 {
 	grad.setZero(pos.rows());
 
-	for(auto &el : elements)
+	for(auto &el : elements_)
 	{
-		int v0 = el.vid0_;
-		int v1 = el.vid1_;
+		int v0 = el->vid0_;
+		int v1 = el->vid1_;
 		
 		Eigen::Vector2d localGrad;
 
-		double localEnergy = el.computeElementPotential(pos(v0), pos(v1), &localGrad);
+		double localEnergy = el->computeElementPotential(pos(v0), pos(v1), &localGrad);
 		grad(v0) += localGrad(0);
 		grad(v1) += localGrad(1);
 
@@ -323,14 +328,14 @@ void CompositeModel::computeElasticGradient(Eigen::VectorXd pos, Eigen::VectorXd
 
 void CompositeModel::computeElasticHessian(Eigen::VectorXd pos, std::vector<Eigen::Triplet<double>>& T)
 {
-	for (auto &el : elements)
+	for (auto &el : elements_)
 	{
-		int v0 = el.vid0_;
-		int v1 = el.vid1_;
+		int v0 = el->vid0_;
+		int v1 = el->vid1_;
 		
 		Eigen::Matrix2d localH;
 
-		double localEnergy = el.computeElementPotential(pos(v0), pos(v1), NULL, &localH);
+		double localEnergy = el->computeElementPotential(pos(v0), pos(v1), NULL, &localH);
 
 		T.push_back(Eigen::Triplet<double>(v0, v0, localH(0, 0)));
 		T.push_back(Eigen::Triplet<double>(v0, v1, localH(0, 1)));
@@ -377,7 +382,7 @@ void CompositeModel::computeFloorGradeint(Eigen::VectorXd pos, Eigen::VectorXd& 
 	}
 }
 
-void CompositeModel::computeFloorHessian(Eigen::VectorXd q, std::vector<Eigen::Triplet<double>>& hessian)
+void CompositeModel::computeFloorHessian(Eigen::VectorXd pos, std::vector<Eigen::Triplet<double>>& hessian)
 {
 	int nverts = restPos_.size();
 
@@ -385,7 +390,7 @@ void CompositeModel::computeFloorHessian(Eigen::VectorXd q, std::vector<Eigen::T
 	{
 		if (fixedPos_[i])
 			continue;
-		if (q(id) <= params_.barrierEps)
+		if (pos(i) <= params_.barrierEps)
 		{
 			double dist = pos(i);
 			double value = -2 * std::log(dist / params_.barrierEps) + (params_.barrierEps - dist) * (params_.barrierEps + 3 * dist) / (dist * dist);
@@ -414,7 +419,7 @@ void CompositeModel::computeGravityGradient(Eigen::VectorXd pos, Eigen::VectorXd
 {
 
 	int nverts = restPos_.size();
-	grad.setZero(q.size());
+	grad.setZero(pos.size());
 
 	for (size_t i = 0; i < nverts; i++)
 	{
@@ -428,10 +433,10 @@ void CompositeModel::computeGravityGradient(Eigen::VectorXd pos, Eigen::VectorXd
 double CompositeModel::computeInternalBarrier(Eigen::VectorXd pos)
 {
 	double energy = 0;
-	for (auto &el : elements)
+	for (auto &el : elements_)
 	{
-		int v0 = el.vid0_;
-		int v1 = el.vid1_;
+		int v0 = el->vid0_;
+		int v1 = el->vid1_;
 		if(fixedPos_[v0] && fixedPos_[v1])
 			continue;
 
@@ -452,10 +457,10 @@ void CompositeModel::computeInternalGradient(Eigen::VectorXd pos, Eigen::VectorX
 {
 	grad.setZero(pos.size());
 
-	for (auto &el : elements)
+	for (auto &el : elements_)
 	{
-		int v0 = el.vid0_;
-		int v1 = el.vid1_;
+		int v0 = el->vid0_;
+		int v1 = el->vid1_;
 
 		if(fixedPos_[v0] && fixedPos_[v1])
 			continue;
@@ -481,12 +486,12 @@ void CompositeModel::computeInternalGradient(Eigen::VectorXd pos, Eigen::VectorX
 	}
 }
 
-void CompositeModel::computeInternalHessian(Eigen::VectorXd q, std::vector<Eigen::Triplet<double>>& hessian)
+void CompositeModel::computeInternalHessian(Eigen::VectorXd pos, std::vector<Eigen::Triplet<double>>& hessian)
 {
-	for (auto &el : elements)
+	for (auto &el : elements_)
 	{
-		int v0 = el.vid0_;
-		int v1 = el.vid1_;
+		int v0 = el->vid0_;
+		int v1 = el->vid1_;
 
 		if(fixedPos_[v0] && fixedPos_[v1])
 			continue;
@@ -520,11 +525,11 @@ double CompositeModel::getMaxStepSize(Eigen::VectorXd q, Eigen::VectorXd dir)
 	{
 		for(auto &el : elements_)
 		{
-			int v0 = el.vid0_;
-			int v1 = el.vid1_;
+			int v0 = el->vid0_;
+			int v1 = el->vid1_;
 
-			dr = pos(v1) - pos(v0);
-			deltaDr = dir(v1) - dir(v0);
+			double dr = pos(v1) - pos(v0);
+			double deltaDr = dir(v1) - dir(v0);
 
 			if (dr * (dr + deltaDr) <= 0) // possible inverse
 			{

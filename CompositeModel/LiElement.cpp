@@ -7,10 +7,10 @@
 double LiElement::computeElementPotential(double P0, double P1, Eigen::Vector2d *grad, Eigen::Matrix2d *hess)
 {
 	double mu, lambda;
-	getrLambdaMu(lambda, mu);
+	getLambdaMu(lambda, mu);
 	double energy = 0;
 
-	double drRest = restP1_ - restP0;
+	double drRest = restP1_ - restP0_;
 
  	double dr = P1 - P0;
 

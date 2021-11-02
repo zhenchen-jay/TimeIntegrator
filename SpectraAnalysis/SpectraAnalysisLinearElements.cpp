@@ -119,7 +119,7 @@ void SpectraAnalysisLinearElements::initialization()
 		}
 		else
 		{
-			// super low when size of q is large
+			// super slow when size of q is large
 			Eigen::GeneralizedEigenSolver<Eigen::MatrixXd> ges;
 			ges.compute(K_.toDense(), massMat_.toDense());
 			eigenValues_ = ges.eigenvalues().real();

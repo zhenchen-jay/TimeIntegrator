@@ -24,8 +24,10 @@ namespace TimeIntegrator
 *
 We use implemented the scheme mentioned in the paper "An unconditionally stable time integration methodwith controllable dissipation for second-order nonlineardynamics", which is claimed to be second-order accurate the unconditionally stable. 
 */
-    void computeCoefficients(double rho, double &c1, double &c2, double &b1, double &b2, double &alpha)
-    {
+    template<typename Problem>
+	void compositeScheme(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext, double rho = 1.0)
+	{
+		double c1, c2, b1, b2, alpha;
         if(rho == 1.0)
         {
             c1 = 1.0 / 4;
@@ -42,13 +44,6 @@ We use implemented the scheme mentioned in the paper "An unconditionally stable 
             b2 = 1.0 / 2;
             alpha = c1 / c2;
         }
-    }
-
-	template<typename Problem>
-	void compositeScheme(const Eigen::VectorXd& xcur, const Eigen::VectorXd& vcur, const double h, const Eigen::VectorXd& M, Problem energyModel, Eigen::VectorXd& xnext, Eigen::VectorXd& vnext, double rho = 1.0)
-	{
-		double c1, c2, b1, b2, alpha;
-        computeCoefficients(rho, c1, c2, b1, b2, alpha);
         std::cout << "c1: " << c1 << ", c2: " << c2 << ", b1: " << b1 << ", b2 " << b2 << ", alpha: " << alpha << std::endl;
 
         Eigen::VectorXd x1, v1, a1, f1, x2, v2, a2, f2;

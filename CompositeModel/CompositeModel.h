@@ -5,6 +5,7 @@
 #include <Eigen/Sparse>
 
 #include "FiniteElement.h"
+#include "../PhysicalModel/SimParameters.h"
 
 class CompositeModel
 {
@@ -12,7 +13,7 @@ public:
 	CompositeModel() {}
 	virtual ~CompositeModel() = default;
 
-	void initialize(Eigen::VectorXd resPos, std::vector<FiniteElement> elements, Eigen::VectorXd massVec, std::map<int, double>* clampedPoints);
+	void initialize(SimParameters params, Eigen::VectorXd resPos, std::vector<std::shared_ptr<FiniteElement>> elements, Eigen::VectorXd massVec, std::map<int, double>* clampedPoints);
 	void updateProjM(std::map<int, double>* clampedPoints);
 	
 	// Implement potential computation
@@ -82,10 +83,13 @@ public:
 	
 
 public:
+	SimParameters params_;
 	Eigen::VectorXd restPos_;
-	std::vector<FiniteElement> elements_;
+	std::vector<std::shared_ptr<FiniteElement>> elements_;
 	Eigen::SparseMatrix<double> projM_;
 	Eigen::SparseMatrix<double> unProjM_;
 	std::vector<bool> fixedPos_;
 	Eigen::VectorXd massVec_;
+
+	std::map<int, double> clampedPoints_;
 };

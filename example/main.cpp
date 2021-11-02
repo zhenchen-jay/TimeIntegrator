@@ -8,20 +8,29 @@
 
 #include "../Gui/GooHook1dGui.h"
 #include "../Gui/FiniteElementsGui.h"
+#include "../Gui/CompositeElementsGui.h"
 #include "../Cli/GooHook1dCli.h"
 
 std::shared_ptr<GooHook1dGui> hook = NULL;
 std::shared_ptr<FiniteElementsGui> FEM = NULL;
+std::shared_ptr<CompositeElementsGui> CFEM = NULL;
 std::shared_ptr<GooHook1dCli> hookCli = NULL;
 
-bool isHookModel = false;
+enum CurProblemModel
+{
+	PM_HK = 0,
+	PM_FEM = 1,
+	PM_CFEM = 2
+};
+
+CurProblemModel problemModel = CurProblemModel::PM_CFEM;
 
 
 void toggleSimulation(igl::opengl::glfw::Viewer& viewer)
 {
-	if (!hook && !FEM)
+	if (!hook && !FEM && !CFEM)
 		return;
-	if (isHookModel)
+	if (problemModel == CurProblemModel::PM_HK)
 	{
 		if (!hook)
 		{
@@ -31,23 +40,34 @@ void toggleSimulation(igl::opengl::glfw::Viewer& viewer)
 		else
 			hook->isPaused_ = !(hook->isPaused_);
 	}
-	else if (!FEM)
+	else if (problemModel == CurProblemModel::PM_FEM)
 	{
-		std::cerr << "error, FEM pointer uninitialized" << std::endl;
-		exit(1);
+		if (!FEM)
+		{
+			std::cerr << "error, FEM pointer uninitialized" << std::endl;
+			exit(1);
+		}
+		else
+			FEM->isPaused_ = !(FEM->isPaused_);
 	}
 	else
 	{
-		FEM->isPaused_ = !(FEM->isPaused_);
+		if (!CFEM)
+		{
+			std::cerr << "error, composite FEM pointer uninitialized" << std::endl;
+			exit(1);
+		}
+		else
+			CFEM->isPaused_ = !(CFEM->isPaused_);
 	}
 
 }
 
 void resetSimulation(igl::opengl::glfw::Viewer& viewer)
 {
-	if (!hook && !FEM)
+	if (!hook && !FEM && !CFEM)
 		return;
-	if (isHookModel)
+	if (problemModel == CurProblemModel::PM_HK)
 	{
 		if (!hook)
 		{
@@ -60,15 +80,31 @@ void resetSimulation(igl::opengl::glfw::Viewer& viewer)
 			hook->renderRenderGeometry(viewer);
 		}
 	}
-	else if (!FEM)
+	else if (problemModel == CurProblemModel::PM_FEM)
 	{
-		std::cerr << "error, FEM pointer uninitialized" << std::endl;
-		exit(1);
+		if (!FEM)
+		{
+			std::cerr << "error, FEM pointer uninitialized" << std::endl;
+			exit(1);
+		}
+		else
+		{
+			FEM->reset();
+			FEM->renderRenderGeometry(viewer);
+		}
 	}
 	else
 	{
-		FEM->reset();
-		FEM->renderRenderGeometry(viewer);
+		if (!CFEM)
+		{
+			std::cerr << "error, Compoiste FEM pointer uninitialized" << std::endl;
+			exit(1);
+		}
+		else
+		{
+			CFEM->reset();
+			CFEM->renderRenderGeometry(viewer);
+		}
 	}
 }
 
@@ -94,10 +130,10 @@ void saveScreenshot(igl::opengl::glfw::Viewer& viewer, const std::string& filePa
 
 bool drawCallback(igl::opengl::glfw::Viewer &viewer)
 {
-	if (!hook && !FEM)
+	if (!hook && !FEM && !CFEM)
 		return false;
 
-	if (isHookModel)
+	if (problemModel == CurProblemModel::PM_HK)
 	{
 		if (!hook)
 		{
@@ -118,20 +154,44 @@ bool drawCallback(igl::opengl::glfw::Viewer &viewer)
 		}
 		
 	}
-	else if (!FEM)
+	else if (problemModel == CurProblemModel::PM_FEM)
 	{
-		std::cerr << "error, FEM pointer uninitialized" << std::endl;
-		exit(1);
+		if (!FEM)
+		{
+			std::cerr << "error, FEM pointer uninitialized" << std::endl;
+			exit(1);
+		}
+
+		else
+		{
+			if (!FEM->reachTheTermination() && !(FEM->isPaused_))
+			{
+				FEM->printTime();
+				FEM->saveInfo();
+				FEM->simulateOneStep();
+				FEM->updateRenderGeometry();
+				FEM->renderRenderGeometry(viewer);
+			}
+		}
 	}
 	else
 	{
-		if (!FEM->reachTheTermination() && !(FEM->isPaused_))
+		if (!CFEM)
 		{
-			FEM->printTime();
-			FEM->saveInfo();
-			FEM->simulateOneStep();
-			FEM->updateRenderGeometry();
-			FEM->renderRenderGeometry(viewer);
+			std::cerr << "error, composite FEM pointer uninitialized" << std::endl;
+			exit(1);
+		}
+
+		else
+		{
+			if (!CFEM->reachTheTermination() && !(CFEM->isPaused_))
+			{
+				CFEM->printTime();
+				CFEM->saveInfo();
+				CFEM->simulateOneStep();
+				CFEM->updateRenderGeometry();
+				CFEM->renderRenderGeometry(viewer);
+			}
 		}
 	}
 	
@@ -239,7 +299,7 @@ int main(int argc, char* argv[])
 	else
 	{
 		igl::opengl::glfw::Viewer viewer;
-		if (isHookModel)
+		if (problemModel == CurProblemModel::PM_HK)
 		{
 			hook = std::make_shared<GooHook1dGui>();
 			hook->reset();
@@ -248,7 +308,7 @@ int main(int argc, char* argv[])
 			viewer.core().camera_zoom = 2.10;
 
 		}
-		else
+		else if (problemModel == CurProblemModel::PM_FEM)
 		{
 			FEM = std::make_shared<FiniteElementsGui>();
 			FEM->reset();
@@ -258,6 +318,16 @@ int main(int argc, char* argv[])
 			/*if(FEM->params_.floorEnabled)
 				viewer.core().camera_zoom = 2.10;*/
 		}
+
+		else
+		{
+			CFEM = std::make_shared<CompositeElementsGui>();
+			CFEM->reset();
+			CFEM->renderRenderGeometry(viewer);
+			viewer.data().set_face_based(CFEM->plotCompression_);
+			viewer.core().camera_zoom = 0.5;
+		}
+
 		viewer.data().show_lines = false;
 		viewer.core().background_color << 1.0f, 1.0f, 1.0f, 1.0f;
 		viewer.core().orthographic = true;
@@ -313,10 +383,12 @@ int main(int argc, char* argv[])
 				}
 
 			}
-			if (isHookModel)
+			if (problemModel == CurProblemModel::PM_HK)
 				hook->drawGUI(menu);
-			else
+			else if (problemModel == CurProblemModel::PM_FEM)
 				FEM->drawGUI(menu);
+			else
+				CFEM->drawGUI(menu);
 			/*return false;*/
 			ImGui::End();
 		};
