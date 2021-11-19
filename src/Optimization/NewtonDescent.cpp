@@ -1,8 +1,10 @@
 
 #include "../../include/Optimization/LineSearch.h"
 #include "../../include/Optimization/NewtonDescent.h"
+#include <iomanip>
 
-void OptSolver::newtonSolver(std::function<double(Eigen::VectorXd, Eigen::VectorXd*, Eigen::SparseMatrix<double>*)> objFunc, std::function<double(Eigen::VectorXd, Eigen::VectorXd)> findMaxStep, std::function<void(Eigen::VectorXd)> postIteration, Eigen::VectorXd& x0, int numIter, double gradTol, double xTol, double fTol)
+
+void OptSolver::newtonSolver(std::function<double(Eigen::VectorXd, Eigen::VectorXd*, Eigen::SparseMatrix<double>*)> objFunc, std::function<double(Eigen::VectorXd, Eigen::VectorXd)> findMaxStep, std::function<void(Eigen::VectorXd)> postIteration, Eigen::VectorXd& x0, int numIter, double gradTol, double xTol, double fTol, bool isPrintInfo)
 {
 	const int DIM = x0.rows();
 	Eigen::VectorXd grad = Eigen::VectorXd::Zero(DIM);
@@ -15,7 +17,8 @@ void OptSolver::newtonSolver(std::function<double(Eigen::VectorXd, Eigen::Vector
 	int i = 0;
 	for (; i < numIter; i++)
 	{
-		//std::cout << "\niter: " << i << std::endl;
+		if(isPrintInfo)
+			std::cout << "\niter: " << i << std::endl;
 		double f = objFunc(x0, &grad, &hessian);
 
 		Eigen::SparseMatrix<double> H = hessian;
@@ -43,11 +46,25 @@ void OptSolver::newtonSolver(std::function<double(Eigen::VectorXd, Eigen::Vector
 		reg *= 0.5;
 		reg = std::max(reg, 1e-16);
 
+		if (isPrintInfo)
+		{
+			std::cout << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << "x0: " << x0.transpose() << ", after update: " << (x0 + rate * delta_x).transpose() << std::endl;
+			std::cout << "hessian: \n" << H.toDense() << std::endl;
+			std::cout << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << "neg grad: " << neggrad.transpose() << ", dir: " << delta_x.transpose() << std::endl;
+		}
+
 		x0 = x0 + rate * delta_x;
 
 		double fnew = objFunc(x0, &grad, NULL);
 
-		/*std::cout << "f_old: " << f << ", f_new: " << fnew << ", grad norm: " << grad.norm() << ", variable update: " << rate * delta_x.norm() << std::endl;*/
+		if (isPrintInfo)
+		{
+			std::cout << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << "f_old: " << f << ", f_new: " << fnew << ", rate: " << rate << ", max step size: " << maxStepSize << ", grad norm: " << grad.norm() << ", variable update: " << rate * delta_x.norm() << std::endl;
+			
+		}
+		
+		/*if (i == 1)
+			system("pause");*/
 
 		postIteration(x0);
 

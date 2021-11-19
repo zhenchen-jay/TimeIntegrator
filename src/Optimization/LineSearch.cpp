@@ -1,6 +1,6 @@
 
 #include "../../include/Optimization/LineSearch.h"
-
+#include <iostream>
 
 double LineSearch::backtrackingArmijo(const Eigen::VectorXd& x, const Eigen::VectorXd& grad, const Eigen::VectorXd& dir, std::function<double(Eigen::VectorXd, Eigen::VectorXd*, Eigen::SparseMatrix<double>*)> objFunc, const double alphaInit)
 {
@@ -17,6 +17,8 @@ double LineSearch::backtrackingArmijo(const Eigen::VectorXd& x, const Eigen::Vec
         alpha *= rho;
         xNew = x + alpha * dir;
         fNew = objFunc(xNew, NULL, NULL);
+        /*std::cout << "cache: " << cache << ", alpha: " << alpha << ", f: " << f << ", fNew: " << fNew << std::endl;
+        std::cout << "xnew: " << xNew.transpose() << std::endl;*/
     }
 
     return alpha;

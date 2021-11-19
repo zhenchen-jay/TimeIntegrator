@@ -31,6 +31,10 @@ x_{n+1} =  min_y 1/2 (y - xtilde)^T M (y - xtilde) + h^2 \beta E(y)
 	        xnext = xcur;
 	        vnext = vcur;
 	    }
+		bool isPrintInfo = false;
+		/*if (std::abs(xcur(2) - 0.0119639999999786) < 1e-8)
+			isPrintInfo = true;*/
+
 		std::vector<Eigen::Triplet<double>> massTrip;
 		Eigen::SparseMatrix<double> massMat(M.size(), M.size());
 
@@ -83,7 +87,12 @@ x_{n+1} =  min_y 1/2 (y - xtilde)^T M (y - xtilde) + h^2 \beta E(y)
 		// newton step to find the optimal
 		xnext = xcur;
 		energyModel.preTimeStep(xnext);
-		OptSolver::newtonSolver(newmarkEnergy, findMaxStep, postIteration, xnext);
+		
+
+		OptSolver::newtonSolver(newmarkEnergy, findMaxStep, postIteration, xnext, 1000,1e-14, 0, 0, isPrintInfo);
+
+		if (isPrintInfo)
+			system("pause");
 
 		Eigen::VectorXd forceNext;
 		energyModel.computeGradient(xnext, forceNext);

@@ -13,14 +13,14 @@ struct SimParameters
         NewtonMaxIters = 20;
         NewtonTolerance = 1e-8;
 
-        gravityEnabled = false;
+        gravityEnabled = true;
         gravityG = -0.98;
         springsEnabled = true;
         springStiffness = 1e3;
         maxSpringStrain = 0.2;
         dampingEnabled = true;
         dampingStiffness = 1.0;
-        floorEnabled = false;
+        floorEnabled = true;
 		frictionEnabled = false;
 
         youngs = 1000;

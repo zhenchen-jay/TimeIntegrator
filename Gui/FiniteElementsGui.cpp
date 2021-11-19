@@ -255,8 +255,87 @@ void FiniteElementsGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu& menu)
 		std::cout << "g-h: " << std::endl;
 		model_->testElasticGradient(curQ_);*/
 		//
-		model_->testPotentialDifferentialPerface(curQ_, 1);
-		model_->testGradientDifferentialPerface(curQ_, 1);
+		/*model_->testPotentialDifferentialPerface(curQ_, 1);
+		model_->testGradientDifferentialPerface(curQ_, 1);*/
+
+		std::vector<Eigen::Triplet<double>> massTrip;
+		Eigen::SparseMatrix<double> massMat(model_->massVec_.size(), model_->massVec_.size());
+
+		for (int i = 0; i < model_->massVec_.size(); i++)
+			massTrip.push_back({ i, i , model_->massVec_(i) });
+		massMat.setFromTriplets(massTrip.begin(), massTrip.end());
+
+		massTrip.clear();
+		Eigen::SparseMatrix<double> massMatInv(model_->massVec_.size(), model_->massVec_.size());
+
+		for (int i = 0; i < model_->massVec_.size(); i++)
+			massTrip.push_back({ i, i , 1.0 / model_->massVec_(i) });
+		massMatInv.setFromTriplets(massTrip.begin(), massTrip.end());
+
+		Eigen::VectorXd xcur, vcur, fcur;
+		xcur.resize(3);
+		xcur << 2.011963999999975,  1.011963999999974, 0.01196399999997866;
+
+		vcur.resize(3);
+		vcur << -1.391600000000035, -1.391599999999994, -1.391599999999968;
+
+		double beta = 1.0 / 4;
+		double h = 5e-3;
+
+		model_->computeGradient(xcur, fcur);
+		fcur *= -1;
+
+		auto newmarkEnergy = [&](Eigen::VectorXd x, Eigen::VectorXd* grad, Eigen::SparseMatrix<double>* hess)
+		{
+			Eigen::VectorXd xtilde = xcur + h * vcur + h * h * (0.5 - beta) * massMatInv * fcur;
+			std::cout << "fcur: " << fcur.transpose() << std::endl;
+			std::cout << "xtilde: " << xtilde.transpose() << std::endl;
+
+			double E = 1.0 / 2.0 * (x - xtilde).transpose() * massMat * (x - xtilde) + beta * h * h * model_->computeEnergy(x);
+
+			std::cout << "first part: " << 1.0 / 2.0 * (x - xtilde).transpose() * massMat * (x - xtilde) << std::endl;
+			std::cout << "second part: " << beta * h * h * model_->computeEnergy(x) << std::endl;
+
+			if (grad)
+			{
+				model_->computeGradient(x, (*grad));
+				(*grad) = massMat * (x - xtilde) + beta * h * h * (*grad);
+			}
+
+			if (hess)
+			{
+				model_->computeHessian(x, (*hess));
+				(*hess) = massMat + beta * h * h * (*hess);
+			}
+
+			return E;
+		};
+		Eigen::Vector3d x(2.004993749999975,  1.004993749999974, 0.00499374999997877);
+		double energy = newmarkEnergy(x, NULL, NULL);
+		std::cout << energy << std::endl;
+		std::cout << "IPC energy: " << model_->computeFloorBarrier(x) << std::endl;
+
+		Eigen::VectorXd grad;
+		model_->computeFloorGradeint(x, grad);
+		std::cout << "IPC grad: " << grad.transpose() << std::endl;
+
+		std::vector<Eigen::Triplet<double>> T;
+		Eigen::SparseMatrix<double> H(3, 3);
+
+		model_->computeFloorHessian(x, T);
+		H.setFromTriplets(T.begin(), T.end());
+		std::cout << "IPC hess: \n" << H.toDense() << std::endl;
+
+		T.clear();
+		model_->computeElasticHessian(x, T);
+		H.setFromTriplets(T.begin(), T.end());
+		std::cout << "elastic hess: \n" << H.toDense() << std::endl;
+
+
+		model_->computeHessian(x, H);
+		std::cout << "total hess: \n" << H.toDense() << std::endl;
+
+		system("pause");
 	}
 
 }

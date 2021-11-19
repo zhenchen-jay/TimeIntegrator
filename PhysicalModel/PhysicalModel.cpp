@@ -120,9 +120,9 @@ double PhysicalModel::computeEnergy(Eigen::VectorXd q)
 	if (params_.elasticEnabled)
 		energy += computeElasticPotential(q);
 	if (params_.floorEnabled)
-		energy += computeFloorBarrier(q);
+		energy += params_.barrierStiffness * computeFloorBarrier(q);
 	if (params_.internalContactEnabled)
-		energy += computeInternalBarrier(q);
+		energy += params_.barrierStiffness * computeInternalBarrier(q);
 	return energy;
 }
 
@@ -735,11 +735,11 @@ double PhysicalModel::getMaxStepSize(Eigen::VectorXd q, Eigen::VectorXd dir)
 				continue;
 
 			//double upperStep = (params_.topLine - q(id)) / dir(id) > 0 ? (params_.topLine - q(id)) / dir(id) : 1.0;
-			double upperStep = 1.0;
-			double lowerStep = (-q(id)) / dir(id) > 0 ? (-q(id)) / dir(id) : 1.0;
-			if(upperStep > 0 || lowerStep > 0)
+			//double upperStep = 1.0;
+			double lowerStep = -q(id) / dir(id);
+			if(lowerStep > 0)
 			{
-			    double qiStep = 0.8 * std::min(upperStep, lowerStep);
+			    double qiStep = 0.8 * lowerStep;
 			    maxStep = std::min(maxStep, qiStep);
 			}
 		}
