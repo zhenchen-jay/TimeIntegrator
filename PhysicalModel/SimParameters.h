@@ -14,7 +14,7 @@ struct SimParameters
         NewtonTolerance = 1e-8;
 
         gravityEnabled = false;
-        gravityG = -9.8;
+        gravityG = -0.98;
         springsEnabled = true;
         springStiffness = 1e3;
         maxSpringStrain = 0.2;
@@ -23,7 +23,7 @@ struct SimParameters
         floorEnabled = false;
 		frictionEnabled = false;
 
-        youngs = 1e4;
+        youngs = 1000;
         poisson = 0.3;
         elasticEnabled = true;
         internalContactEnabled = false;
@@ -37,21 +37,21 @@ struct SimParameters
         NM_gamma = 0.5;
         NM_beta = 0.25;
 
-        modelType = MT_HARMONIC_1D;
-        materialType = MT_LINEAR;
-        barrierStiffness = 1;
+        modelType = MT_POGO_STICK;
+        materialType = MT_NEOHOOKEAN;
+        barrierStiffness = youngs;
         barrierEps = 0.01;
 
-        totalTime = 20;
+        totalTime = 10;
         totalNumIter = totalTime / timeStep;
 
-        numSegs = 10;
+        numSegs = 2;
        /* topLine = 20;
         barLen = 10;
         barHeight = 5;*/
-        topLine = 2;
-        barLen = 1;
-        barHeight = 0.5;
+        topLine = 10;
+        barLen = 2;
+        barHeight = 1;
 
         numSpectra = 10;
         isSaveInfo = true;
@@ -60,7 +60,7 @@ struct SimParameters
         youngsList.resize(youngs, youngs);
 
         impulsePow = 10;
-        impulseMag = youngs / 2;
+        impulseMag = 0;
 
         splitRatio = 0.5;
         rho = 1.0;

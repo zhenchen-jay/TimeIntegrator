@@ -23,7 +23,7 @@ enum CurProblemModel
 	PM_CFEM = 2
 };
 
-CurProblemModel problemModel = CurProblemModel::PM_CFEM;
+CurProblemModel problemModel = CurProblemModel::PM_FEM;
 
 
 void toggleSimulation(igl::opengl::glfw::Viewer& viewer)

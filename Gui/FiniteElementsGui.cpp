@@ -1075,4 +1075,46 @@ void FiniteElementsGui::saveInfo()
 		sfs << std::endl;
 	std::cout << std::endl;
 
+	std::string posFileName = outputFolderPath_ + std::string("pos_status.txt");
+	std::ofstream pfs;
+
+	if (params_.isSaveInfo)
+	{
+		if (time_)
+			pfs.open(posFileName, std::ofstream::out | std::ofstream::app);
+		else
+			pfs.open(posFileName, std::ofstream::out);
+
+		for (int i = 0; i < curPos_.rows(); i++)
+		{
+			if (i == 0)
+				pfs << time_ << " ";
+			pfs << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << curPos_(i);
+			if (i != curPos_.rows() - 1)
+				pfs << " ";
+			else
+				pfs << "\n";
+		}
+	}
+
+	std::string vecFileName = outputFolderPath_ + std::string("velocity_status.txt");
+	std::ofstream vfs;
+
+	if (params_.isSaveInfo)
+	{
+		if (time_)
+			vfs.open(vecFileName, std::ofstream::out | std::ofstream::app);
+		else
+			vfs.open(vecFileName, std::ofstream::out);
+
+		for (int i = 0; i < curVel_.rows(); i++)
+		{
+			vfs << std::setprecision(std::numeric_limits<long double>::digits10 + 1) << curVel_(i);
+			if (i != curVel_.rows() - 1)
+				vfs << " ";
+			else
+				vfs << "\n";
+		}
+	}
+
 }

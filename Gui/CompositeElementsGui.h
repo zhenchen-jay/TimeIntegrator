@@ -14,7 +14,7 @@
 #include "../CompositeModel/CompositeModel.h"
 #include "../CompositeModel/LiElement.h"
 #include "../CompositeModel/StVKElement.h"
-#include "../CompositeModel/NHElement.h"
+#include "../CompositeModel/NonlinearElement.h"
 #include "../PhysicalModel/SimParameters.h"
 #include "../PhysicalModel/SceneObjects.h"
 
@@ -35,13 +35,14 @@ public:
 		softYoungs_ = 1;
 		nonlinearYoungs_ = 1;
 
-		numNH_ = 1;
+		numNL_ = 1;
 		numSoftLi_ = 1;
 		numStiffLi_ = 1;
 
-		NHEnlargeRatio_ = 1.2;
+		NLEnlargeRatio_ = 0.5001;
 		stiffEnlargeRatio_ = 1.2;
 		softEnlargeRatio_ = 1.2;
+		NLStiffRatio_ = 0.5;
 	}
 
 	void drawGUI(igl::opengl::glfw::imgui::ImGuiMenu& menu);
@@ -139,16 +140,17 @@ private:
 	double softYoungs_;
 	double nonlinearYoungs_;
 
-	int numNH_;
+	int numNL_;
 	int numStiffLi_;
 	int numSoftLi_;
 	double initialEnergy_;
 	Eigen::VectorXd initModeEnergy_;
 
 	int saveFrame_;
-	double NHEnlargeRatio_;
+	double NLEnlargeRatio_;
 	double stiffEnlargeRatio_;
 	double softEnlargeRatio_;
+	double NLStiffRatio_;
 
 public:
 	bool isPaused_;

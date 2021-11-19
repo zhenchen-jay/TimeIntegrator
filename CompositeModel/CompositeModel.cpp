@@ -302,6 +302,7 @@ double CompositeModel::computeElasticPotential(Eigen::VectorXd pos)
 		int v1 = el->vid1_;
 
 		energy += el->computeElementPotential(pos(v0), pos(v1));
+		// break;
 
 	}
 	return energy;
@@ -322,6 +323,7 @@ void CompositeModel::computeElasticGradient(Eigen::VectorXd pos, Eigen::VectorXd
 		double localEnergy = el->computeElementPotential(pos(v0), pos(v1), &localGrad);
 		grad(v0) += localGrad(0);
 		grad(v1) += localGrad(1);
+		// break;
 
 	}
 }
@@ -341,6 +343,7 @@ void CompositeModel::computeElasticHessian(Eigen::VectorXd pos, std::vector<Eige
 		T.push_back(Eigen::Triplet<double>(v0, v1, localH(0, 1)));
 		T.push_back(Eigen::Triplet<double>(v1, v0, localH(1, 0)));
 		T.push_back(Eigen::Triplet<double>(v1, v1, localH(1, 1)));
+		// break;
 	}
 }
 

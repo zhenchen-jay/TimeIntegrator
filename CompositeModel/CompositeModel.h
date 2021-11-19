@@ -1,5 +1,7 @@
 #pragma once
 #include <map>
+#include <iomanip>
+#include <memory>
 #include <Eigen/Core>
 #include <Eigen/Dense>
 #include <Eigen/Sparse>

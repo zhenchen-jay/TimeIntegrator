@@ -11,10 +11,13 @@ public:
 	restP0_(restP0),
 	restP1_(restP1),
 	vid0_(vid0),
-	vid1_(vid1)
+	vid1_(vid1),
+	nonlinearRatio_(std::abs(restP1-restP0))
 	{}
 
 	virtual double computeElementPotential(double P0, double P1, Eigen::Vector2d *grad = NULL, Eigen::Matrix2d *hess = NULL) = 0;
+
+	void setNonlinearRatio(double ratio) {nonlinearRatio_ = ratio;}
 
 protected:
 	void getLambdaMu(double& lambda, double& mu)
@@ -36,4 +39,6 @@ public:
 
 	double restP0_;
 	double restP1_;
+
+	double nonlinearRatio_;
 };

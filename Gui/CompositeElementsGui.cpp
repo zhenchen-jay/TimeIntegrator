@@ -101,9 +101,16 @@ void CompositeElementsGui::drawGUI(igl::opengl::glfw::imgui::ImGuiMenu& menu)
 		ImGui::InputInt("soft seg num", &numSoftLi_);
 		ImGui::InputDouble("soft stretch ratio", &softEnlargeRatio_);
 
-		ImGui::InputDouble("Neo Youngs", &nonlinearYoungs_);
-		ImGui::InputInt("Neo seg num", &numNH_);
-		ImGui::InputDouble("NH stretch ratio", &NHEnlargeRatio_);
+		// ImGui::InputDouble("Neo Youngs", &nonlinearYoungs_);
+		// ImGui::InputInt("Neo seg num", &numNL_);
+		// ImGui::InputDouble("NH stretch ratio", &NLEnlargeRatio_);
+
+		ImGui::InputDouble("Nonlinear Youngs", &nonlinearYoungs_);
+		ImGui::InputInt("Nonlinear seg num", &numNL_);
+		ImGui::InputDouble("Nonlinear stretch ratio", &NLEnlargeRatio_);
+		ImGui::InputDouble("Nonlinear stiffness ratio", &NLStiffRatio_);
+
+		
 	}
 
 	if (ImGui::Button("Test Gradient and Hessian", ImVec2(-1, 0)))
@@ -269,9 +276,9 @@ void CompositeElementsGui::updateRenderGeometry()
 
 void CompositeElementsGui::getOutputFolderPath()
 {
-	outputFolderPath_ = baseFolder_ + "Compoiste/" + std::to_string(params_.timeStep) + "_" + std::to_string(params_.barrierStiffness) + "_numSeg_" + std::to_string(numNH_) + "_" + std::to_string(numStiffLi_) + "_" + std::to_string(numSoftLi_) + "/";
+	outputFolderPath_ = baseFolder_ + "Compoiste/" + std::to_string(params_.timeStep) + "_" + std::to_string(params_.barrierStiffness) + "_numSeg_" + std::to_string(numNL_) + "_" + std::to_string(numStiffLi_) + "_" + std::to_string(numSoftLi_) + "/";
 
-	outputFolderPath_ = outputFolderPath_ + "stretch_ratio_" + std::to_string(NHEnlargeRatio_) + "_" + std::to_string(stiffEnlargeRatio_) + "_" + std::to_string(softEnlargeRatio_) + "/";
+	outputFolderPath_ = outputFolderPath_ + "stretch_ratio_" + std::to_string(NLEnlargeRatio_) + "_" + std::to_string(stiffEnlargeRatio_) + "_" + std::to_string(NLStiffRatio_) + "_" + std::to_string(softEnlargeRatio_) + "/";
 	switch (params_.integrator)
 	{
 	case SimParameters::TI_EXPLICIT_EULER:
@@ -333,7 +340,7 @@ void CompositeElementsGui::initSimulation()
 	time_ = 0;
 	iterNum_ = 0;
 
-	int numSegs = numNH_ + numSoftLi_ + numStiffLi_;
+	int numSegs = numNL_ + numSoftLi_ + numStiffLi_;
 	baseFolder_ = "../output/";
 
 	curPos_.resize(numSegs + 1);
@@ -344,7 +351,7 @@ void CompositeElementsGui::initSimulation()
 	
 	curPos_(0) = 0;
 	restPos(0) = 0;
-	massVec(0) = params_.particleMass * 1.0 / numNH_;
+	massVec(0) = params_.particleMass * 1.0 / numNL_;
 	
 	std::map<int, double> clampedPos = { {0, 0} };
 
@@ -352,13 +359,13 @@ void CompositeElementsGui::initSimulation()
 	{
 		double deltax = 0;
 		double ratio = 0;
-		if (i < numNH_)
+		if (i < numNL_)
 		{
-			deltax = 1.0 / numNH_;
-			ratio = NHEnlargeRatio_;
+			deltax = 1.0 / numNL_;
+			ratio = NLEnlargeRatio_;
 		}
 			
-		else if (i < numNH_ + numStiffLi_)
+		else if (i < numNL_ + numStiffLi_)
 		{
 			deltax = 1.0 / numStiffLi_;
 			ratio = stiffEnlargeRatio_;
@@ -383,16 +390,17 @@ void CompositeElementsGui::initSimulation()
 			len /= 2;
 		}
 		else if (i == 0)
-			len = 1.0 / numNH_;
+			len = 1.0 / numNL_;
 		else
 			len = 1.0 / numSoftLi_;
 		massVec(i) = len * params_.particleMass;
 	}
-
-	std::cout << restPos << std::endl;
-	for (int i = 0; i < numNH_; i++)
+    for(int i = 0; i < restPos.rows(); i++)
+        std::cout << restPos(i) << ",  " << curPos_(i) << std::endl;
+	for (int i = 0; i < numNL_; i++)
 	{
-		elements_[i] = std::make_shared<NHElement>(nonlinearYoungs_, params_.poisson, restPos(i), restPos(i+1), i, i + 1);
+		elements_[i] = std::make_shared<NonlinearElement>(nonlinearYoungs_, params_.poisson, restPos(i), restPos(i+1), i, i + 1);
+		elements_[i]->setNonlinearRatio(NLStiffRatio_);
 	}
 
 	for (int i = 0; i < numStiffLi_ + numSoftLi_; i++)
@@ -400,7 +408,7 @@ void CompositeElementsGui::initSimulation()
 		double tmpY = softYoungs_;
 		if (i < numStiffLi_)
 			tmpY = stiffYoungs_;
-		elements_[i + numNH_] = std::make_shared<LiElement>(tmpY, params_.poisson, restPos(i + numNH_), restPos(i + numNH_ + 1), i + numNH_, i + numNH_ + 1);
+		elements_[i + numNL_] = std::make_shared<LiElement>(tmpY, params_.poisson, restPos(i + numNL_), restPos(i + numNL_ + 1), i + numNL_, i + numNL_ + 1);
 	}
 
 	model_ = std::make_shared<CompositeModel>();
